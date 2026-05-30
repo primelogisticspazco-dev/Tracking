@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Prime Logistic Spa</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --dk:#0a0f1e;--card:#111827;--card2:#161f30;--bdr:rgba(255,255,255,0.08);
+  --accent:#00d4aa;--accent2:#0066ff;--warn:#f59e0b;
+  --danger:#ef4444;--success:#10b981;--blue:#60a5fa;--purple:#a78bfa;
+  --text:#f0f4f8;--muted:#8892a4;
+  --font:'Outfit',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+html,body{min-height:100vh;background:var(--dk);color:var(--text);font-family:var(--font);overflow-x:hidden}
+
+/* ===== TRACKING ===== */
+#app-tracking{width:100%;max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+.header{background:#0d1a35;padding:14px 16px 12px;border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:100}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.logo{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--accent);text-transform:uppercase}
+.live-badge{display:flex;align-items:center;gap:5px;background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.3);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;color:var(--accent)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.header-title{font-size:18px;font-weight:700}
+.header-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.nav-tabs{display:flex;background:var(--card);border-bottom:1px solid var(--bdr);overflow-x:auto;scrollbar-width:none}
+.nav-tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;padding:10px 14px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;letter-spacing:.5px;text-transform:uppercase}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(0,212,170,.05)}
+.section{display:none;padding:14px;flex-direction:column;gap:12px}
+.section.active{display:flex}
+.card{background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:14px}
+.sec-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}
+.inp{background:rgba(255,255,255,.05);border:1px solid var(--bdr);border-radius:8px;padding:9px 11px;font-size:13px;color:var(--text);font-family:var(--font);outline:none;transition:border-color .2s;width:100%}
+.inp:focus{border-color:var(--accent)}
+.inp::placeholder{color:var(--muted);font-size:12px}
+.inp-wrap{flex:1;display:flex;flex-direction:column}
+.inp-label{font-size:10px;color:var(--muted);font-weight:500;letter-spacing:.5px;margin-bottom:4px}
+.form-row{display:flex;gap:8px;margin-bottom:10px}
+.btn{flex:1;padding:10px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;letter-spacing:.5px;transition:all .2s;font-family:var(--font)}
+.btn-primary{background:var(--accent);color:#0a0f1e}
+.btn-clear-form{background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--bdr)}
+.btn-wa{background:#25d366;color:#fff}
+.btn-danger{background:rgba(239,68,68,.08);border:1.5px solid rgba(239,68,68,.3);color:var(--danger);display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:var(--font);cursor:pointer;transition:all .18s}
+.status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pill{background:rgba(255,255,255,.03);border:1.5px solid var(--bdr);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .18s}
+.pill:hover{transform:scale(1.03)}
+.pill.active{background:rgba(0,212,170,.07);border-color:var(--accent)}
+.pill-dot{width:6px;height:6px;border-radius:50%;margin:0 auto 6px}
+.pill-count{font-size:28px;font-weight:700;font-family:var(--mono);line-height:1}
+.pill-label{font-size:9px;color:var(--muted);font-weight:600;letter-spacing:.6px;text-transform:uppercase;margin-top:4px}
+.c-retirado{color:var(--purple)}.dot-retirado{background:var(--purple)}
+.c-transito{color:var(--blue)}.dot-transito{background:var(--blue)}
+.c-ruta{color:var(--accent)}.dot-ruta{background:var(--accent)}
+.c-entregado{color:var(--success)}.dot-entregado{background:var(--success)}
+.c-pendiente{color:var(--warn)}.dot-pendiente{background:var(--warn)}
+.c-incidencia{color:var(--danger)}.dot-incidencia{background:var(--danger)}
+.otif-card{background:var(--card);border:1px solid var(--accent);border-radius:14px;padding:14px;position:relative;overflow:hidden}
+.otif-title{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.otif-num{font-size:48px;font-weight:700;font-family:var(--mono);color:var(--accent);line-height:1}
+.otif-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.otif-bg{position:absolute;right:-10px;top:-10px;font-size:90px;font-weight:900;color:rgba(0,212,170,.05);font-family:var(--mono);line-height:1;pointer-events:none}
+.delivery-item{background:var(--card);border:1px solid var(--bdr);border-radius:12px;padding:12px;cursor:pointer;transition:all .2s;margin-bottom:8px}
+.delivery-item:hover{border-color:rgba(255,255,255,.2);transform:translateX(2px)}
+.delivery-item.alert-item{border-left:3px solid var(--danger)}
+.di-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.di-id{font-size:12px;font-family:var(--mono);color:var(--muted)}
+.di-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:.5px;text-transform:uppercase}
+.badge-retirado{background:rgba(167,139,250,.15);color:var(--purple)}
+.badge-transito{background:rgba(0,102,255,.15);color:var(--blue)}
+.badge-ruta{background:rgba(0,212,170,.15);color:var(--accent)}
+.badge-entregado{background:rgba(16,185,129,.15);color:var(--success)}
+.badge-pendiente{background:rgba(245,158,11,.15);color:var(--warn)}
+.badge-incidencia{background:rgba(239,68,68,.15);color:var(--danger)}
+.di-client{font-size:14px;font-weight:600;margin-bottom:3px}
+.di-addr{font-size:11px;color:var(--muted)}
+.di-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr)}
+.di-driver{display:flex;align-items:center;gap:6px}
+.di-avatar{width:24px;height:24px;border-radius:50%;background:var(--accent2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff}
+.di-name{font-size:11px;font-weight:600}
+.di-plate{font-size:9px;color:var(--muted);font-family:var(--mono)}
+.di-eta-label{font-size:9px;color:var(--muted);text-align:right}
+.di-eta-val{font-size:12px;font-weight:700;color:var(--accent);text-align:right}
+.alert-row{display:flex;align-items:center;gap:5px;margin-top:6px;background:rgba(239,68,68,.08);border-radius:6px;padding:5px 8px}
+.alert-txt{font-size:10px;color:var(--danger);font-weight:600}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kpi-card{background:var(--card);border:1px solid var(--bdr);border-radius:12px;padding:12px}
+.kpi-label{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.kpi-val{font-size:26px;font-weight:700;font-family:var(--mono)}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.kpi-bar{height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:8px;overflow:hidden}
+.kpi-fill{height:100%;border-radius:2px;transition:width 1s ease}
+.hist-item{display:flex;gap:10px}
+.hist-line{display:flex;flex-direction:column;align-items:center}
+.hist-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.hist-connector{width:1px;flex:1;background:var(--bdr);min-height:20px}
+.hist-content{flex:1;padding-bottom:14px}
+.hist-top{display:flex;justify-content:space-between;align-items:center}
+.hist-event{font-size:12px;font-weight:600}
+.hist-time{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.hist-detail{font-size:11px;color:var(--muted);margin-top:3px}
+.confirm-overlay{display:none;align-items:center;justify-content:center;min-height:170px}
+.confirm-overlay.visible{display:flex}
+.confirm-box{background:var(--card);border:1px solid rgba(239,68,68,.4);border-radius:16px;padding:20px;width:100%;text-align:center}
+.confirm-title{font-size:15px;font-weight:700;margin-bottom:6px}
+.confirm-sub{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5}
+.confirm-btns{display:flex;gap:8px}
+.cbtn{flex:1;padding:11px;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--font);cursor:pointer;border:none;transition:all .18s}
+.cbtn-cancel{background:rgba(255,255,255,.06);color:var(--muted)}
+.cbtn-confirm{background:var(--danger);color:#fff}
+.footer-btns{display:flex;gap:8px;padding:14px;background:var(--dk);border-top:1px solid var(--bdr);position:sticky;bottom:0}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(60px);background:#111827;border:1px solid var(--accent);border-radius:10px;padding:10px 20px;font-size:12px;color:var(--accent);font-weight:700;transition:transform .3s;pointer-events:none;white-space:nowrap;z-index:999}
+.toast.show{transform:translateX(-50%) translateY(0)}
+select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238892a4' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-color:rgba(255,255,255,.05);padding-right:32px}
+
+/* ===== FORMULARIO QR ===== */
+#app-formulario{display:none;width:100%;max-width:430px;margin:0 auto;min-height:100vh;padding-bottom:30px}
+.fheader{background:#0d1a35;padding:14px 16px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:12px}
+.fback{background:rgba(255,255,255,.06);border:1px solid var(--bdr);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--font);white-space:nowrap}
+.ftitle{font-size:15px;font-weight:700}
+.fsub{font-size:11px;color:var(--muted)}
+.f-wrap{padding:14px}
+.pedido-card{background:var(--card2);border:1px solid var(--bdr);border-radius:14px;overflow:hidden;margin-bottom:14px}
+.pedido-header{background:rgba(0,212,170,.08);border-bottom:1px solid rgba(0,212,170,.15);padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.pedido-id{font-size:13px;font-weight:700;font-family:var(--mono);color:var(--accent)}
+.pedido-body{padding:12px 14px}
+.pedido-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:12px}
+.pedido-row:last-child{border-bottom:none}
+.pedido-label{color:var(--muted)}
+.pedido-val{font-weight:600;text-align:right;max-width:65%}
+.f-sec-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin:16px 0 10px}
+.estado-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.estado-btn{border-radius:14px;padding:16px 8px 14px;text-align:center;cursor:pointer;border:2px solid var(--bdr);background:rgba(255,255,255,.03);transition:all .15s;position:relative;overflow:hidden;-webkit-user-select:none;user-select:none}
+.estado-btn:active{transform:scale(.95)}
+.estado-icon{font-size:26px;display:block;margin-bottom:6px;line-height:1}
+.estado-label{font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.check-mark{position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;opacity:0;transition:opacity .15s}
+.estado-btn.sel .check-mark{opacity:1}
+.e-retirado{color:var(--purple)}.sel-retirado{border-color:var(--purple)!important;background:rgba(167,139,250,.1)!important}.ck-retirado{background:var(--purple)}
+.e-transito{color:var(--blue)}.sel-transito{border-color:var(--blue)!important;background:rgba(96,165,250,.1)!important}.ck-transito{background:var(--blue)}
+.e-ruta{color:var(--accent)}.sel-ruta{border-color:var(--accent)!important;background:rgba(0,212,170,.1)!important}.ck-ruta{background:var(--accent)}
+.e-entregado{color:var(--success)}.sel-entregado{border-color:var(--success)!important;background:rgba(16,185,129,.1)!important}.ck-entregado{background:var(--success)}
+.e-pendiente{color:var(--warn)}.sel-pendiente{border-color:var(--warn)!important;background:rgba(245,158,11,.1)!important}.ck-pendiente{background:var(--warn)}
+.e-incidencia{color:var(--danger)}.sel-incidencia{border-color:var(--danger)!important;background:rgba(239,68,68,.1)!important}.ck-incidencia{background:var(--danger)}
+.eta-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px}
+.eta-btn{background:rgba(255,255,255,.04);border:1.5px solid var(--bdr);border-radius:10px;padding:14px 4px;text-align:center;cursor:pointer;font-size:12px;font-weight:700;color:var(--text);transition:all .15s;-webkit-user-select:none;user-select:none}
+.eta-btn:active{transform:scale(.94)}
+.eta-btn.sel{background:rgba(0,212,170,.12);border-color:var(--accent);color:var(--accent)}
+.eta-btn-custom{grid-column:span 5;font-size:12px;color:var(--muted);padding:10px;background:rgba(255,255,255,.04);border:1.5px solid var(--bdr);border-radius:10px;cursor:pointer;font-family:var(--font);width:100%;margin-bottom:6px}
+.eta-manual{display:none;margin-bottom:6px}
+.eta-manual.show{display:block}
+.obs-btn{width:100%;background:rgba(255,255,255,.03);border:1.5px solid var(--bdr);border-radius:10px;padding:11px 14px;font-size:12px;color:var(--muted);text-align:left;cursor:pointer;font-family:var(--font);transition:all .2s;margin-bottom:6px}
+.obs-area{display:none;margin-bottom:6px}
+.obs-area.show{display:block}
+.f-inp{background:rgba(255,255,255,.05);border:1.5px solid var(--bdr);border-radius:10px;padding:11px 14px;font-size:14px;color:var(--text);font-family:var(--font);outline:none;width:100%;transition:border-color .2s}
+.f-inp:focus{border-color:var(--accent)}
+.btn-enviar{width:100%;padding:16px;border-radius:14px;border:none;background:var(--accent);color:#0a0f1e;font-size:16px;font-weight:800;cursor:pointer;font-family:var(--font);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px}
+.btn-enviar:active{transform:scale(.97)}
+.pantalla-ok{display:none;min-height:80vh;flex-direction:column;align-items:center;justify-content:center;padding:30px 20px;text-align:center}
+.pantalla-ok.show{display:flex}
+.ok-icon{font-size:72px;margin-bottom:16px;animation:pop .4s ease}
+@keyframes pop{0%{transform:scale(0)}80%{transform:scale(1.15)}100%{transform:scale(1)}}
+.ok-title{font-size:22px;font-weight:800;margin-bottom:8px}
+.ok-sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:20px}
+.ok-card{background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:14px;width:100%;margin-bottom:16px;text-align:left}
+.btn-nuevo{width:100%;padding:14px;border-radius:12px;background:rgba(255,255,255,.06);border:1.5px solid var(--bdr);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);margin-bottom:10px}
+.btn-wa-ok{width:100%;padding:14px;border-radius:12px;background:#25d366;border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)}
+/* MODAL QR */
+.qr-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:20px}
+.qr-modal.show{display:flex}
+.qr-modal-box{background:var(--card);border:1px solid var(--bdr);border-radius:18px;padding:20px;width:100%;max-width:340px;text-align:center}
+.qr-modal-title{font-size:15px;font-weight:700;margin-bottom:4px}
+.qr-modal-sub{font-size:11px;color:var(--muted);margin-bottom:14px}
+.qr-modal-qr{background:#fff;border-radius:12px;padding:14px;display:inline-block;margin-bottom:10px}
+.qr-modal-doc{font-size:12px;font-weight:700;color:#0a0f1e;font-family:monospace;margin-top:4px}
+.qr-modal-btns{display:flex;gap:8px;margin-top:12px}
+.qr-modal-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.1);border:none;color:var(--text);border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+
+<!-- ===== TRACKING ===== -->
+<div id="app-tracking">
+  <div class="header">
+    <div class="header-top">
+      <span class="logo">Prime Logistic</span>
+      <span class="live-badge"><span class="live-dot"></span>En vivo</span>
+    </div>
+    <div class="header-title">Tracking de Entregas</div>
+    <div class="header-sub">Santiago &amp; Sur de Chile · <span id="last-update">Actualizado ahora</span></div>
+  </div>
+  <div class="nav-tabs">
+    <div class="tab active" onclick="showTab('inicio',this)">Inicio</div>
+    <div class="tab" onclick="showTab('mapa',this)">Mapa</div>
+    <div class="tab" onclick="showTab('pedidos',this)">Pedidos</div>
+    <div class="tab" onclick="showTab('kpi',this)">KPIs</div>
+    <div class="tab" onclick="showTab('historial',this)">Historial</div>
+    <div class="tab" onclick="showTab('qr',this)">QR</div>
+  </div>
+
+  <!-- INICIO -->
+  <div class="section active" id="sec-inicio">
+    <div class="card" style="text-align:center">
+      <div class="sec-title" style="margin-bottom:6px">Ingresar nuevo pedido</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6">Escanea el QR o comparte el link al conductor para completar el formulario.</div>
+      <div style="background:#fff;border-radius:14px;padding:14px;display:inline-block;margin-bottom:12px"><div id="qr-ingreso"></div></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px">O comparte el link directamente 👇</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" style="flex:1;padding:11px;background:rgba(0,212,170,.1);color:var(--accent);border:1px solid rgba(0,212,170,.3);font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;font-family:var(--font)" onclick="copiarURLQR()">📋 Copiar link</button>
+        <button class="btn btn-wa" style="flex:1;padding:11px;font-size:12px" onclick="compartirWAQR()">📲 Compartir WA</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-title">Estado general</div>
+      <div class="status-grid">
+        <div class="pill" id="p-retirado" onclick="togglePill('retirado')"><div class="pill-dot dot-retirado"></div><div class="pill-count c-retirado" id="n-retirado">4</div><div class="pill-label">Retirado</div></div>
+        <div class="pill" id="p-transito" onclick="togglePill('transito')"><div class="pill-dot dot-transito"></div><div class="pill-count c-transito" id="n-transito">7</div><div class="pill-label">En Tránsito</div></div>
+        <div class="pill active" id="p-ruta" onclick="togglePill('ruta')"><div class="pill-dot dot-ruta"></div><div class="pill-count c-ruta" id="n-ruta">12</div><div class="pill-label">En Ruta</div></div>
+        <div class="pill" id="p-entregado" onclick="togglePill('entregado')"><div class="pill-dot dot-entregado"></div><div class="pill-count c-entregado" id="n-entregado">38</div><div class="pill-label">Entregado</div></div>
+        <div class="pill" id="p-pendiente" onclick="togglePill('pendiente')"><div class="pill-dot dot-pendiente"></div><div class="pill-count c-pendiente" id="n-pendiente">5</div><div class="pill-label">Pendiente</div></div>
+        <div class="pill" id="p-incidencia" onclick="togglePill('incidencia')"><div class="pill-dot dot-incidencia"></div><div class="pill-count c-incidencia" id="n-incidencia">2</div><div class="pill-label">Incidencia</div></div>
+      </div>
+      <div id="filter-info" style="margin-top:10px;padding:8px 10px;background:rgba(0,212,170,.06);border-radius:8px;border:1px solid rgba(0,212,170,.2);display:none;font-size:11px">Filtrando: <span id="filter-label" style="font-weight:700;color:var(--accent)"></span></div>
+      <div class="confirm-overlay" id="confirm-estado">
+        <div class="confirm-box">
+          <div style="font-size:28px;margin-bottom:8px">🗑</div>
+          <div class="confirm-title">Limpiar estado general</div>
+          <div class="confirm-sub">Se resetearán todos los contadores a cero.</div>
+          <div class="confirm-btns"><button class="cbtn cbtn-cancel" onclick="cancelClear('estado')">Cancelar</button><button class="cbtn cbtn-confirm" onclick="doClear()">Sí, limpiar</button></div>
+        </div>
+      </div>
+      <button class="btn-danger" style="margin-top:12px" onclick="askClear('estado')"><i class="ti ti-trash" style="font-size:18px"></i>Limpiar estado general</button>
+    </div>
+    <div class="otif-card">
+      <div class="otif-bg">OTIF</div>
+      <div class="otif-title">OTIF del día</div>
+      <div class="otif-num" id="otif-num">91<span style="font-size:24px">%</span></div>
+      <div class="otif-sub">On-Time In-Full · <span id="otif-sub">38 de 42 entregas correctas</span></div>
+    </div>
+  </div>
+
+  <!-- MAPA -->
+  <div class="section" id="sec-mapa">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 14px 10px;border-bottom:1px solid var(--bdr)">
+        <div class="sec-title" style="margin-bottom:8px">Ubicación del cliente</div>
+        <select class="inp" id="mapa-pedido-select" style="margin-bottom:0" onchange="mapaSelPedido()"><option value="">— Selecciona un pedido —</option></select>
+      </div>
+      <div id="leaflet-map" style="height:320px;width:100%"></div>
+      <div id="mapa-info" style="padding:10px 14px;border-top:1px solid var(--bdr);display:none">
+        <div id="mapa-cliente" style="font-size:13px;font-weight:600"></div>
+        <div id="mapa-addr" style="font-size:11px;color:var(--muted);margin-top:2px"></div>
+        <div style="display:flex;gap:8px;margin-top:8px"><span id="mapa-badge" style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:.5px;text-transform:uppercase"></span><span id="mapa-eta" style="font-size:11px;color:var(--accent);font-weight:600"></span></div>
+      </div>
+    </div>
+    <div class="card"><div class="sec-title">Conductores activos</div><div id="driver-list"></div></div>
+  </div>
+
+  <!-- PEDIDOS -->
+  <div class="section" id="sec-pedidos">
+    <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px">
+      <button class="btn" style="flex:0 0 auto;padding:6px 12px;font-size:10px;background:rgba(0,212,170,.1);color:var(--accent);border:1px solid rgba(0,212,170,.3)" onclick="filterPedidos('all')">Todos</button>
+      <button class="btn" style="flex:0 0 auto;padding:6px 10px;font-size:10px;background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--bdr)" onclick="filterPedidos('ruta')">En Ruta</button>
+      <button class="btn" style="flex:0 0 auto;padding:6px 10px;font-size:10px;background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--bdr)" onclick="filterPedidos('pendiente')">Pendientes</button>
+      <button class="btn" style="flex:0 0 auto;padding:6px 10px;font-size:10px;background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--bdr)" onclick="filterPedidos('incidencia')">Incidencias</button>
+    </div>
+    <div id="orders-list"></div>
+    <div class="confirm-overlay" id="confirm-all">
+      <div class="confirm-box">
+        <div style="font-size:28px;margin-bottom:8px">🗑</div>
+        <div class="confirm-title">Limpiar todos los pedidos</div>
+        <div class="confirm-sub">Se eliminarán todos los pedidos de la lista.</div>
+        <div class="confirm-btns"><button class="cbtn cbtn-cancel" onclick="cancelClear('all')">Cancelar</button><button class="cbtn cbtn-confirm" onclick="clearAllOrders()">Sí, limpiar</button></div>
+      </div>
+    </div>
+    <button class="btn-danger" onclick="askClear('all')"><i class="ti ti-trash" style="font-size:18px"></i>Limpiar todos los pedidos</button>
+  </div>
+
+  <!-- KPI -->
+  <div class="section" id="sec-kpi">
+    <div class="otif-card"><div class="otif-bg">91%</div><div class="otif-title">OTIF del período</div><div class="otif-num">91<span style="font-size:24px">%</span></div><div class="otif-sub">On-Time In-Full · Meta: 95% · Δ–4 puntos</div></div>
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Entregas hoy</div><div class="kpi-val" style="color:var(--success)">38</div><div class="kpi-sub">de 42 programadas</div><div class="kpi-bar"><div class="kpi-fill" style="width:90%;background:var(--success)"></div></div></div>
+      <div class="kpi-card"><div class="kpi-label">A tiempo</div><div class="kpi-val" style="color:var(--accent)">86%</div><div class="kpi-sub">Puntualidad</div><div class="kpi-bar"><div class="kpi-fill" style="width:86%;background:var(--accent)"></div></div></div>
+      <div class="kpi-card"><div class="kpi-label">Tiempo prom.</div><div class="kpi-val" style="color:var(--blue)">2.4h</div><div class="kpi-sub">Retiro a entrega</div><div class="kpi-bar"><div class="kpi-fill" style="width:60%;background:var(--blue)"></div></div></div>
+      <div class="kpi-card"><div class="kpi-label">Incidencias</div><div class="kpi-val" style="color:var(--danger)">2</div><div class="kpi-sub">4.8% del total</div><div class="kpi-bar"><div class="kpi-fill" style="width:5%;background:var(--danger)"></div></div></div>
+      <div class="kpi-card"><div class="kpi-label">Km recorridos</div><div class="kpi-val" style="color:var(--warn)">1,240</div><div class="kpi-sub">Flota completa</div><div class="kpi-bar"><div class="kpi-fill" style="width:74%;background:var(--warn)"></div></div></div>
+      <div class="kpi-card"><div class="kpi-label">Satisfacción</div><div class="kpi-val" style="color:var(--purple)">4.7</div><div class="kpi-sub">Promedio cliente</div><div class="kpi-bar"><div class="kpi-fill" style="width:94%;background:var(--purple)"></div></div></div>
+    </div>
+    <div class="card"><div class="sec-title">Rendimiento semanal</div>
+      <svg width="100%" viewBox="0 0 340 90"><line x1="10" y1="80" x2="330" y2="80" stroke="#1e2a3a" stroke-width="0.5"/><polyline points="20,55 75,42 130,30 185,48 240,22 295,35 330,28" fill="none" stroke="#00d4aa" stroke-width="2" stroke-linejoin="round"/><circle cx="20" cy="55" r="3" fill="#00d4aa"/><circle cx="75" cy="42" r="3" fill="#00d4aa"/><circle cx="130" cy="30" r="3" fill="#00d4aa"/><circle cx="185" cy="48" r="3" fill="#00d4aa"/><circle cx="240" cy="22" r="3" fill="#00d4aa"/><circle cx="295" cy="35" r="3" fill="#00d4aa"/><circle cx="330" cy="28" r="3" fill="#00d4aa"/><text x="20" y="90" text-anchor="middle" fill="#8892a4" font-size="9" font-family="Outfit">Lun</text><text x="75" y="90" text-anchor="middle" fill="#8892a4" font-size="9" font-family="Outfit">Mar</text><text x="130" y="90" text-anchor="middle" fill="#8892a4" font-size="9" font-family="Outfit">Mié</text><text x="185" y="90" text-anchor="middle" fill="#8892a4" font-size="9" font-family="Outfit">Jue</text><text x="240" y="90" text-anchor="middle" fill="#8892a4" font-size="9" font-family="Outfit">Vie</text><text x="295" y="90" text-anchor="middle" fill="#8892a4" font-size="9" font-family="Outfit">Sáb</text><text x="330" y="90" text-anchor="middle" fill="#8892a4" font-size="9" font-family="Outfit">Hoy</text></svg>
+    </div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="section" id="sec-historial">
+    <div class="card"><div class="sec-title">Historial de entregas</div><div id="history-list"></div></div>
+    <div class="card">
+      <div class="sec-title" style="margin-bottom:10px">Informe individual</div>
+      <div class="inp-label" style="margin-bottom:4px">Seleccionar pedido</div>
+      <select class="inp" id="wa-pedido-select" style="margin-bottom:10px"><option value="">— Selecciona un pedido —</option></select>
+      <div id="wa-preview" style="display:none;background:rgba(37,211,102,.06);border:1px solid rgba(37,211,102,.25);border-radius:10px;padding:12px;margin-bottom:10px;font-size:12px;line-height:1.7;color:var(--text);white-space:pre-wrap;font-family:var(--mono)"></div>
+      <button class="btn btn-wa" style="width:100%;padding:13px;font-size:13px" onclick="sendWAIndividual()">📲 Enviar informe del pedido</button>
+    </div>
+    <div class="card">
+      <div class="sec-title" style="margin-bottom:10px">Informe por remitente</div>
+      <select class="inp" id="wa-remitente-select" style="margin-bottom:10px" onchange="previewWARemitente()"><option value="">— Selecciona un remitente —</option></select>
+      <div id="wa-remitente-preview" style="display:none;background:rgba(37,211,102,.06);border:1px solid rgba(37,211,102,.25);border-radius:10px;padding:12px;margin-bottom:10px;font-size:11px;line-height:1.8;color:var(--text);white-space:pre-wrap;font-family:var(--mono)"></div>
+      <button class="btn btn-wa" style="width:100%;padding:13px;font-size:13px" onclick="sendWARemitente()">📲 Enviar informe al remitente</button>
+    </div>
+    <div class="card"><div class="sec-title" style="margin-bottom:10px">Resumen general</div><button class="btn btn-wa" style="width:100%;padding:13px;font-size:13px" onclick="sendWA()">📲 Enviar resumen general</button></div>
+  </div>
+
+  <!-- QR -->
+  <div class="section" id="sec-qr">
+
+    <!-- QR POR PEDIDO -->
+    <div class="card">
+      <div class="sec-title" style="margin-bottom:6px">QR por factura / GD</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">Selecciona el pedido, genera su QR e imprímelo en la factura o guía de despacho. El conductor lo escanea y el formulario se abre con todos los datos precargados.</div>
+      <div class="inp-label" style="margin-bottom:4px">Seleccionar pedido</div>
+      <select class="inp" id="qr-pedido-select" style="margin-bottom:12px" onchange="generarQRPedido()">
+        <option value="">— Selecciona un pedido —</option>
+      </select>
+      <div id="qr-pedido-result" style="display:none;text-align:center">
+        <div style="background:#fff;border-radius:14px;padding:16px;display:inline-block;margin-bottom:10px">
+          <div id="qr-pedido-box"></div>
+          <div id="qr-pedido-label" style="font-size:11px;font-weight:700;color:#0a0f1e;margin-top:8px;font-family:monospace"></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">El conductor escanea → formulario precargado</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" style="flex:1;padding:11px;background:rgba(0,212,170,.1);color:var(--accent);border:1px solid rgba(0,212,170,.3);font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;font-family:var(--font)" onclick="copiarLinkPedido()">📋 Copiar link</button>
+          <button class="btn btn-wa" style="flex:1;padding:11px;font-size:12px" onclick="compartirWAPedidoQR()">📲 Enviar WA</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMPORTAR -->
+    <div class="card">
+      <div class="sec-title" style="margin-bottom:10px">Importar actualización</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6">Pega el link generado por el conductor para actualizar el estado del pedido.</div>
+      <textarea class="inp" id="import-link" rows="3" placeholder="Pega el link aquí..." style="resize:none;font-family:var(--mono);font-size:11px;line-height:1.5"></textarea>
+      <button class="btn btn-primary" style="margin-top:10px;width:100%;padding:12px" onclick="importarPedido()">📥 Importar actualización</button>
+      <div id="import-result" style="display:none;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;line-height:1.6"></div>
+    </div>
+
+  </div>
+
+  <!-- MODAL QR PEDIDO -->
+  <div class="qr-modal" id="qr-modal">
+    <div class="qr-modal-box" style="position:relative">
+      <button class="qr-modal-close" onclick="cerrarModalQR()">✕</button>
+      <div class="qr-modal-title" id="qrm-title">QR del pedido</div>
+      <div class="qr-modal-sub" id="qrm-sub">Escanea para abrir el formulario precargado</div>
+      <div class="qr-modal-qr"><div id="qrm-box"></div><div class="qr-modal-doc" id="qrm-doc"></div></div>
+      <div class="qr-modal-btns">
+        <button class="btn" style="flex:1;padding:11px;background:rgba(0,212,170,.1);color:var(--accent);border:1px solid rgba(0,212,170,.3);font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;font-family:var(--font)" onclick="copiarLinkModalQR()">📋 Copiar link</button>
+        <button class="btn btn-wa" style="flex:1;padding:11px;font-size:12px" onclick="waModalQR()">📲 WA</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-btns">
+    <button class="btn btn-clear-form" style="flex:0 0 auto;padding:10px 14px;font-size:12px" onclick="askClear('all')"><i class="ti ti-trash" style="font-size:16px;vertical-align:-2px"></i> Limpiar</button>
+    <button class="btn btn-wa" style="flex:1" onclick="sendWA()">📲 WhatsApp</button>
+  </div>
+</div>
+
+<!-- ===== FORMULARIO QR ===== -->
+<div id="app-formulario">
+  <div class="fheader">
+    <button class="fback" onclick="volverTracking()">← Volver</button>
+    <div><div class="ftitle">Actualizar pedido</div><div class="fsub" id="fheader-sub">Prime Logistic Spa</div></div>
+  </div>
+
+  <div class="f-wrap">
+    <div id="f-pantalla-main">
+      <div id="pedido-info-wrap"></div>
+
+      <div class="f-sec-title">Estado del pedido</div>
+      <div class="estado-grid">
+        <div class="estado-btn e-retirado" id="eb-retirado" onclick="fSelEstado('retirado')"><div class="check-mark ck-retirado">✓</div><span class="estado-icon">📦</span><div class="estado-label e-retirado">Retirado</div></div>
+        <div class="estado-btn e-transito" id="eb-transito" onclick="fSelEstado('transito')"><div class="check-mark ck-transito">✓</div><span class="estado-icon">🚚</span><div class="estado-label e-transito">Tránsito</div></div>
+        <div class="estado-btn e-ruta sel sel-ruta" id="eb-ruta" onclick="fSelEstado('ruta')"><div class="check-mark ck-ruta">✓</div><span class="estado-icon">🔄</span><div class="estado-label e-ruta">En Ruta</div></div>
+        <div class="estado-btn e-entregado" id="eb-entregado" onclick="fSelEstado('entregado')"><div class="check-mark ck-entregado">✓</div><span class="estado-icon">✅</span><div class="estado-label e-entregado">Entregado</div></div>
+        <div class="estado-btn e-pendiente" id="eb-pendiente" onclick="fSelEstado('pendiente')"><div class="check-mark ck-pendiente">✓</div><span class="estado-icon">⏳</span><div class="estado-label e-pendiente">Pendiente</div></div>
+        <div class="estado-btn e-incidencia" id="eb-incidencia" onclick="fSelEstado('incidencia')"><div class="check-mark ck-incidencia">✓</div><span class="estado-icon">⚠️</span><div class="estado-label e-incidencia">Incidencia</div></div>
+      </div>
+
+      <div class="f-sec-title">ETA — ¿A qué hora llegas?</div>
+      <div class="eta-grid" id="eta-grid">
+        <div class="eta-btn" id="eta-08:30" onclick="fSelEta('08:30')">08:30</div>
+        <div class="eta-btn" id="eta-10:30" onclick="fSelEta('10:30')">10:30</div>
+        <div class="eta-btn" id="eta-11:30" onclick="fSelEta('11:30')">11:30</div>
+        <div class="eta-btn" id="eta-12:30" onclick="fSelEta('12:30')">12:30</div>
+        <div class="eta-btn" id="eta-13:30" onclick="fSelEta('13:30')">13:30</div>
+      </div>
+      <button class="eta-btn-custom" onclick="fMostrarEtaManual()">✏️ Otra hora</button>
+      <div class="eta-manual" id="eta-manual"><input class="f-inp" type="time" id="inp-eta" oninput="fSelEtaManual(this.value)"/></div>
+
+      <button class="obs-btn" id="obs-toggle" onclick="fToggleObs()">+ Agregar observación (opcional)</button>
+      <div class="obs-area" id="obs-area"><textarea class="f-inp" id="inp-obs" rows="3" placeholder="Ej: Cliente no estaba, portería recibió..."></textarea></div>
+
+      <button class="btn-enviar" onclick="fEnviar()"><span>Confirmar actualización</span> →</button>
+    </div>
+
+    <div class="pantalla-ok" id="f-pantalla-ok">
+      <div class="ok-icon">✅</div>
+      <div class="ok-title">¡Pedido actualizado!</div>
+      <div class="ok-sub" id="ok-sub"></div>
+      <div class="ok-card" id="ok-resumen"></div>
+      <button class="btn-wa-ok" onclick="fEnviarWA()">📲 Notificar por WhatsApp</button>
+      <button class="btn-nuevo" onclick="fReset()">← Actualizar otro pedido</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">OK</div>
+
+<script>
+// ===== DATOS =====
+const orders = [
+  {id:'GD-0421',remitente:'Bodega Central Santiago',client:'Comercial Fuentes Ltda.',telefono:'+56912340001',addr:'Av. Grecia 2800',city:'Ñuñoa',status:'ruta',driver:'Carlos Vera',plate:'RVTK-32',eta:'13:30',doc:'GD-0421',alert:false},
+  {id:'GD-0422',remitente:'Planta Procesadora Sur',client:'Ferretería Del Sur',telefono:'+56912340002',addr:'San Martín 450',city:'Temuco',status:'transito',driver:'Mario Soto',plate:'BNJK-91',eta:'10:30',doc:'GD-0422',alert:false},
+  {id:'GD-0423',remitente:'Distribuidora Prime Ltda.',client:'Supermercado La Unión',telefono:'+56912340003',addr:'Los Robles 120',city:'Concepción',status:'pendiente',driver:'Luis Pino',plate:'FXQZ-44',eta:'—',doc:'GD-0423',alert:true},
+  {id:'GD-0424',remitente:'Bodega Central Santiago',client:'Distribuidora Norte S.A.',telefono:'+56912340004',addr:'Alameda 3000',city:'Santiago',status:'entregado',driver:'Juan Mora',plate:'CGTY-17',eta:'Entregado',doc:'FAC-1190',alert:false},
+  {id:'GD-0425',remitente:'Planta Procesadora Sur',client:'Clínica Biobío',telefono:'+56912340005',addr:'Chacabuco 890',city:'Los Ángeles',status:'incidencia',driver:'Pedro Ríos',plate:'HLMP-55',eta:'—',doc:'GD-0425',alert:true},
+  {id:'GD-0426',remitente:'Distribuidora Prime Ltda.',client:'Librería Austral',telefono:'+56912340006',addr:'Arturo Prat 310',city:'Valdivia',status:'retirado',driver:'Sergio Ibáñez',plate:'JNTW-03',eta:'08:30',doc:'GD-0426',alert:false},
+];
+const drivers=[{name:'Carlos Vera',plate:'RVTK-32',city:'Ñuñoa',deliveries:5,status:'ruta'},{name:'Mario Soto',plate:'BNJK-91',city:'Temuco',deliveries:3,status:'transito'},{name:'Pedro Ríos',plate:'HLMP-55',city:'Los Ángeles',deliveries:2,status:'incidencia'},{name:'Sergio Ibáñez',plate:'JNTW-03',city:'Valdivia',deliveries:4,status:'ruta'}];
+const history=[{event:'Entregado',detail:'Comercial Fuentes Ltda. · GD-0410',time:'12:48',color:'#10b981'},{event:'Salida bodega',detail:'Ferretería Del Sur · GD-0422',time:'11:30',color:'#00d4aa'},{event:'Incidencia registrada',detail:'Cliente ausente · GD-0418',time:'10:55',color:'#ef4444'},{event:'Entregado',detail:'Distribuidora Norte · FAC-1185',time:'10:22',color:'#10b981'},{event:'Retraso detectado',detail:'Tráfico ruta 5 sur · GD-0415',time:'09:40',color:'#f59e0b'},{event:'Retirado de bodega',detail:'Clínica Biobío · GD-0425',time:'08:15',color:'#a78bfa'}];
+const counts={retirado:4,transito:7,ruta:12,entregado:38,pendiente:5,incidencia:2};
+const badgeClass={ruta:'badge-ruta',transito:'badge-transito',entregado:'badge-entregado',pendiente:'badge-pendiente',incidencia:'badge-incidencia',retirado:'badge-retirado'};
+const badgeLabel={ruta:'En Ruta',transito:'En Tránsito',entregado:'Entregado',pendiente:'Pendiente',incidencia:'Incidencia',retirado:'Retirado'};
+const statusColor={ruta:'var(--accent)',transito:'var(--blue)',incidencia:'var(--danger)',pendiente:'var(--warn)',entregado:'var(--success)',retirado:'var(--purple)'};
+const statusIcon={ruta:'🔄',transito:'🚚',entregado:'✅',pendiente:'⏳',incidencia:'⚠️',retirado:'📦'};
+const badgeHex={retirado:'#a78bfa',transito:'#60a5fa',ruta:'#00d4aa',entregado:'#10b981',pendiente:'#f59e0b',incidencia:'#ef4444'};
+
+// ===== TRACKING JS =====
+function showTab(tab,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('sec-'+tab).classList.add('active');
+  if(tab==='qr') setTimeout(generarQRTracking,100);
+}
+function togglePill(s){
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  document.getElementById('p-'+s).classList.add('active');
+  const fi=document.getElementById('filter-info');fi.style.display='block';
+  document.getElementById('filter-label').textContent=badgeLabel[s]+' — '+counts[s]+' pedidos';
+}
+function renderOrders(filter){
+  const list=document.getElementById('orders-list');
+  const filtered=filter==='all'?orders:orders.filter(o=>o.status===filter);
+  if(!filtered.length){list.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">Sin pedidos en esta categoría</div>';return;}
+  list.innerHTML=filtered.map(o=>`
+    <div class="delivery-item${o.alert?' alert-item':''}">
+      <div class="di-top"><span class="di-id">${o.id}</span><span class="di-badge ${badgeClass[o.status]}">${badgeLabel[o.status]}</span></div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px"><span style="color:var(--purple);font-weight:600">↑</span> ${o.remitente||'—'}</div>
+      <div class="di-client">→ ${o.client}</div>
+      <div class="di-addr">${o.addr} · ${o.city}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;font-family:var(--mono)">Doc: ${o.doc}</div>
+      <div class="di-bottom">
+        <div class="di-driver"><div class="di-avatar">${o.driver.split(' ').map(w=>w[0]).join('')}</div><div><div class="di-name">${o.driver}</div><div class="di-plate">${o.plate}</div></div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <div><div class="di-eta-label">ETA</div><div class="di-eta-val">${o.eta}</div></div>
+          ${o.telefono?`<button onclick="enviarWAPedido('${o.id}')" style="background:#25d366;color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font)">📲 WA</button>`:''}
+          <button onclick="verQRPedido('${o.id}')" style="background:rgba(0,212,170,.1);color:var(--accent);border:1px solid rgba(0,212,170,.3);border-radius:6px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font)">QR</button>
+          ${o.status!=='entregado'?`<button onclick="marcarEntregado('${o.id}')" style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.4);border-radius:6px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font)">✅ Entregado</button>`:''}
+        </div>
+      </div>
+      ${o.alert?`<div class="alert-row"><i class="ti ti-alert-triangle" style="font-size:13px;color:var(--danger)"></i><span class="alert-txt">Alerta de retraso o incidencia detectada</span></div>`:''}
+    </div>`).join('');
+}
+function renderDrivers(){
+  document.getElementById('driver-list').innerHTML=drivers.map(d=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bdr)">
+      <div style="display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:50%;background:var(--accent2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff">${d.name.split(' ').map(w=>w[0]).join('')}</div><div><div style="font-size:12px;font-weight:600">${d.name}</div><div style="font-size:10px;color:var(--muted);font-family:var(--mono)">${d.plate} · ${d.city}</div></div></div>
+      <div style="text-align:right"><div style="font-size:11px;font-weight:700;color:${statusColor[d.status]}">${badgeLabel[d.status]}</div><div style="font-size:10px;color:var(--muted)">${d.deliveries} entregas</div></div>
+    </div>`).join('');
+}
+function renderHistory(){
+  document.getElementById('history-list').innerHTML=history.map((h,i)=>`
+    <div class="hist-item">
+      <div class="hist-line"><div class="hist-dot" style="background:${h.color}"></div>${i<history.length-1?'<div class="hist-connector"></div>':''}</div>
+      <div class="hist-content"><div class="hist-top"><span class="hist-event" style="color:${h.color}">${h.event}</span><span class="hist-time">${h.time}</span></div><div class="hist-detail">${h.detail}</div></div>
+    </div>`).join('');
+}
+function filterPedidos(f){renderOrders(f);}
+
+function marcarEntregado(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  if(o.status==='entregado'){showToast('Ya está entregado');return;}
+  const prev=o.status;
+  if(counts[prev]!==undefined&&counts[prev]>0)counts[prev]--;
+  o.status='entregado';o.alert=false;o.eta='Entregado';
+  counts.entregado++;
+  updateCounts();populateWASelect();populateRemitenteSelect();populateQRSelect();
+  renderOrders('all');
+  showToast('✅ '+o.client+' marcado como entregado');
+}
+function updateCounts(){
+  Object.keys(counts).forEach(k=>{document.getElementById('n-'+k).textContent=counts[k];});
+  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  const rate=total>0?Math.round(counts.entregado/total*100):0;
+  document.getElementById('otif-num').innerHTML=rate+'<span style="font-size:24px">%</span>';
+  document.getElementById('otif-sub').textContent=counts.entregado+' de '+total+' entregas correctas';
+}
+function askClear(type){document.getElementById('confirm-'+type).classList.add('visible');}
+function cancelClear(type){document.getElementById('confirm-'+type).classList.remove('visible');}
+function doClear(){Object.keys(counts).forEach(k=>counts[k]=0);updateCounts();document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));document.getElementById('filter-info').style.display='none';cancelClear('estado');showToast('Estado general limpiado');}
+function clearAllOrders(){orders.length=0;Object.keys(counts).forEach(k=>counts[k]=0);updateCounts();renderOrders('all');cancelClear('all');showToast('Todos los pedidos eliminados');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+function updateTime(){document.getElementById('last-update').textContent='Actualizado '+new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});}
+function populateWASelect(){
+  const sel=document.getElementById('wa-pedido-select');const current=sel.value;
+  sel.innerHTML='<option value="">— Selecciona un pedido —</option>';
+  orders.forEach(o=>{const opt=document.createElement('option');opt.value=o.id;opt.textContent=o.id+' · '+o.client+' ('+badgeLabel[o.status]+')';sel.appendChild(opt);});
+  if(current)sel.value=current;
+}
+function populateRemitenteSelect(){
+  const sel=document.getElementById('wa-remitente-select');const current=sel.value;
+  sel.innerHTML='<option value="">— Selecciona un remitente —</option>';
+  [...new Set(orders.map(o=>o.remitente).filter(Boolean))].forEach(r=>{const c=orders.filter(o=>o.remitente===r).length;const opt=document.createElement('option');opt.value=r;opt.textContent=r+' ('+c+' pedido'+(c!==1?'s':'')+')';sel.appendChild(opt);});
+  if(current)sel.value=current;
+}
+function previewWA(){
+  const id=document.getElementById('wa-pedido-select').value;
+  const prev=document.getElementById('wa-preview');
+  if(!id){prev.style.display='none';return;}
+  const o=orders.find(x=>x.id===id);if(!o){prev.style.display='none';return;}
+  prev.style.display='block';
+  prev.textContent='📦 Informe — Prime Logistic Spa\n\n🏢 Remitente: '+(o.remitente||'—')+'\n👤 Cliente: '+o.client+'\n📍 '+o.addr+'\n🏙 '+o.city+'\n📄 '+o.doc+'\n'+(statusIcon[o.status]||'•')+' '+badgeLabel[o.status]+'\n🚗 '+o.driver+' · '+o.plate+'\n🕐 ETA: '+o.eta+'\nActualizado: '+new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+}
+function previewWARemitente(){
+  const r=document.getElementById('wa-remitente-select').value;
+  const prev=document.getElementById('wa-remitente-preview');
+  if(!r){prev.style.display='none';return;}
+  prev.style.display='block';prev.textContent=buildMsgRemitente(r);
+}
+function buildMsgRemitente(remitente){
+  const pedidos=orders.filter(o=>o.remitente===remitente);
+  const entregados=pedidos.filter(o=>o.status==='entregado').length;
+  const enRuta=pedidos.filter(o=>o.status==='ruta'||o.status==='transito').length;
+  const pendientes=pedidos.filter(o=>o.status==='pendiente').length;
+  const incidencias=pedidos.filter(o=>o.status==='incidencia').length;
+  return '📦 *Informe de envíos — Prime Logistic Spa*\n'+new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})+'\n\n🏢 *Remitente:* '+remitente+'\n━━━━━━━━━━━━━━\n📊 *Resumen*\n✅ Entregados: '+entregados+'\n🔄 En ruta/tránsito: '+enRuta+'\n⏳ Pendientes: '+pendientes+(incidencias>0?'\n❌ Incidencias: '+incidencias:'')+'\n📦 Total: '+pedidos.length+'\n━━━━━━━━━━━━━━\n*Detalle*\n\n'+pedidos.map((o,i)=>(i+1)+'. '+o.client+'\n   📍 '+o.addr+', '+o.city+'\n   📄 '+o.doc+' · '+(statusIcon[o.status]||'•')+' '+badgeLabel[o.status]+(o.eta&&o.eta!=='—'?' · 🕐 '+o.eta:'')).join('\n\n')+'\n\n🕐 '+new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+}
+function sendWARemitente(){const r=document.getElementById('wa-remitente-select').value;if(!r){showToast('⚠️ Selecciona un remitente');return;}window.open('https://wa.me/?text='+encodeURIComponent(buildMsgRemitente(r)),'_blank');}
+function sendWA(){
+  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  const rate=total>0?Math.round(counts.entregado/total*100):0;
+  const msg='📦 *Informe Prime Logistic Spa*\n'+new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})+'\n\n*Resumen*\n✅ Entregados: '+counts.entregado+'\n🔄 En ruta: '+counts.ruta+'\n🚚 En tránsito: '+counts.transito+'\n⚠️ Pendientes: '+counts.pendiente+'\n❌ Incidencias: '+counts.incidencia+'\n📊 OTIF: '+rate+'%\n\n*Clientes*\n'+(orders.length?orders.slice(0,5).map(o=>'  • '+o.client+' ('+badgeLabel[o.status]+')').join('\n'):'Sin pedidos')+'\n\n🕐 '+new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+function sendWAIndividual(){
+  const id=document.getElementById('wa-pedido-select').value;if(!id){showToast('⚠️ Selecciona un pedido');return;}
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  const msg='📦 *Informe de entrega — Prime Logistic Spa*\n\n🏢 *Remitente:* '+(o.remitente||'—')+'\n👤 *Cliente:* '+o.client+'\n📍 *Dirección:* '+o.addr+'\n🏙 *Ciudad:* '+o.city+'\n📄 *Documento:* '+o.doc+'\n'+(statusIcon[o.status]||'•')+' *Estado:* '+badgeLabel[o.status]+'\n🚗 *Conductor:* '+o.driver+'\n🔑 *Patente:* '+o.plate+'\n🕐 *ETA:* '+o.eta+'\n\nFecha: '+new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})+'\nHora: '+new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  const tel=o.telefono?o.telefono.replace(/[^0-9+]/g,''):'';
+  window.open(tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+function enviarWAPedido(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  const msg='📦 *Informe de entrega — Prime Logistic Spa*\n\n🏢 *Remitente:* '+(o.remitente||'—')+'\n👤 *Cliente:* '+o.client+'\n📍 *Dirección:* '+o.addr+'\n🏙 *Ciudad:* '+o.city+'\n📄 *Documento:* '+o.doc+'\n'+(statusIcon[o.status]||'•')+' *Estado:* '+badgeLabel[o.status]+'\n🚗 *Conductor:* '+o.driver+'\n🔑 *Patente:* '+o.plate+'\n🕐 *ETA:* '+o.eta+'\n\nFecha: '+new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})+'\nHora: '+new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  const tel=o.telefono?o.telefono.replace(/[^0-9+]/g,''):'';
+  window.open(tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+function getLinkPedido(o){
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+  return getSelfURL()+'?pedido='+encoded;
+}
+
+let _qrModalLink='', _qrModalPedido=null;
+
+function verQRPedido(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  const link=getLinkPedido(o);
+  _qrModalLink=link; _qrModalPedido=o;
+  document.getElementById('qrm-title').textContent=o.client;
+  document.getElementById('qrm-sub').textContent=o.doc+' · '+o.addr+', '+o.city;
+  document.getElementById('qrm-doc').textContent=o.doc;
+  const box=document.getElementById('qrm-box');box.innerHTML='';
+  new QRCode(box,{text:link,width:180,height:180,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+  document.getElementById('qr-modal').classList.add('show');
+}
+
+function cerrarModalQR(){document.getElementById('qr-modal').classList.remove('show');}
+function copiarLinkModalQR(){copiar(_qrModalLink,'✅ Link copiado');}
+function waModalQR(){
+  if(!_qrModalPedido)return;
+  const o=_qrModalPedido;
+  const msg='📦 *Prime Logistic Spa — QR de entrega*\n\n👤 Cliente: '+o.client+'\n📍 '+o.addr+', '+o.city+'\n📄 Doc: '+o.doc+'\n\n🔗 Escanea o abre el link para actualizar el estado:\n'+_qrModalLink;
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+
+function populateQRSelect(){
+  const sel=document.getElementById('qr-pedido-select');
+  if(!sel)return;
+  const current=sel.value;
+  sel.innerHTML='<option value="">— Selecciona un pedido —</option>';
+  orders.forEach(o=>{const opt=document.createElement('option');opt.value=o.id;opt.textContent=o.doc+' · '+o.client+' ('+o.city+')';sel.appendChild(opt);});
+  if(current)sel.value=current;
+}
+
+function generarQRPedido(){
+  const id=document.getElementById('qr-pedido-select').value;
+  const res=document.getElementById('qr-pedido-result');
+  if(!id){res.style.display='none';return;}
+  const o=orders.find(x=>x.id===id);if(!o){res.style.display='none';return;}
+  const link=getLinkPedido(o);
+  _qrModalLink=link; _qrModalPedido=o;
+  const box=document.getElementById('qr-pedido-box');box.innerHTML='';
+  new QRCode(box,{text:link,width:180,height:180,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+  document.getElementById('qr-pedido-label').textContent=o.doc+' · '+o.client;
+  res.style.display='block';
+}
+
+function copiarLinkPedido(){copiar(_qrModalLink,'✅ Link copiado');}
+function compartirWAPedidoQR(){
+  if(!_qrModalPedido)return;
+  const o=_qrModalPedido;
+  const msg='📦 *Prime Logistic Spa — QR de entrega*\n\n👤 Cliente: '+o.client+'\n📍 '+o.addr+', '+o.city+'\n📄 Doc: '+o.doc+'\n\n🔗 Escanea o abre para actualizar el estado:\n'+_qrModalLink;
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+
+function mapaSelPedido(){}
+
+// QR
+function getSelfURL(){return window.location.href.split('?')[0];}
+function getQRURL(){return getSelfURL()+'?modo=formulario';}
+function generarQRIngreso(){
+  const c=document.getElementById('qr-ingreso');if(!c||c.innerHTML.trim()!=='')return;
+  new QRCode(c,{text:getQRURL(),width:200,height:200,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+}
+function generarQRTracking(){
+  const c=document.getElementById('tracking-qr');if(!c||c.innerHTML.trim()!=='')return;
+  new QRCode(c,{text:getQRURL(),width:180,height:180,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+}
+function copiarURLQR(){copiar(getQRURL(),'✅ Link copiado');}
+function compartirWAQR(){window.open('https://wa.me/?text='+encodeURIComponent('📦 *Prime Logistic Spa*\n\nUsa este link para ingresar un pedido:\n'+getQRURL()),'_blank');}
+function copiarURLFormulario(){copiar(getQRURL(),'✅ URL copiada');}
+function copiar(txt,msg){if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>showToast(msg));}else{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast(msg);}}
+
+function importarPedido(){
+  const raw=document.getElementById('import-link').value.trim();
+  const result=document.getElementById('import-result');
+  if(!raw){showToast('⚠️ Pega un link primero');return;}
+  try{
+    let encoded=raw;
+    if(raw.includes('?import='))encoded=raw.split('?import=')[1];
+    const o=JSON.parse(decodeURIComponent(escape(atob(encoded))));
+    if(!o.client||!o.id)throw new Error();
+    if(orders.find(x=>x.id===o.id)){result.style.display='block';result.style.cssText='display:block;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);color:#f59e0b';result.textContent='⚠️ El pedido '+o.id+' ya existe.';return;}
+    orders.unshift(o);if(counts[o.status]!==undefined)counts[o.status]++;else counts.pendiente++;
+    updateCounts();populateWASelect();populateRemitenteSelect();renderOrders('all');
+    document.getElementById('import-link').value='';
+    result.style.cssText='display:block;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);color:#10b981';
+    result.innerHTML='✅ <strong>'+o.client+'</strong> importado como <span style="font-family:var(--mono)">'+o.id+'</span>';
+    showToast('✅ Pedido '+o.id+' importado');
+    setTimeout(()=>{result.style.display='none';},4000);
+  }catch(e){result.style.cssText='display:block;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:var(--danger)';result.textContent='❌ Link inválido.';}
+}
+
+// Leer ?import= al cargar
+(function(){
+  const p=new URLSearchParams(window.location.search);
+  const imp=p.get('import');
+  if(imp){try{const o=JSON.parse(decodeURIComponent(escape(atob(imp))));if(o.client&&o.id&&!orders.find(x=>x.id===o.id)){orders.unshift(o);if(counts[o.status]!==undefined)counts[o.status]++;else counts.pendiente++;}}catch(e){}}
+  try{window.history.replaceState({},'',window.location.pathname);}catch(e){}
+})();
+
+// ===== FORMULARIO QR JS =====
+let fEstado='ruta', fEta=null, fPedidoData=null, fObsVisible=false, fResultData=null;
+
+function abrirFormulario(pedido){
+  fPedidoData=pedido||null;fEstado='ruta';fEta=null;fObsVisible=false;fResultData=null;
+  document.getElementById('app-tracking').style.display='none';
+  document.getElementById('app-formulario').style.display='block';
+  document.getElementById('f-pantalla-main').style.display='block';
+  document.getElementById('f-pantalla-ok').classList.remove('show');
+  if(pedido){
+    document.getElementById('fheader-sub').textContent=pedido.id+' · '+pedido.client;
+    const bc=badgeHex[pedido.status]||badgeHex.ruta;
+    document.getElementById('pedido-info-wrap').innerHTML=`
+      <div class="pedido-card">
+        <div class="pedido-header"><span class="pedido-id">${pedido.id}</span><span style="font-size:9px;font-weight:700;padding:3px 9px;border-radius:20px;background:${bc}22;color:${bc};letter-spacing:.5px;text-transform:uppercase">${badgeLabel[pedido.status]}</span></div>
+        <div class="pedido-body">
+          <div class="pedido-row"><span class="pedido-label">Cliente</span><span class="pedido-val">${pedido.client}</span></div>
+          <div class="pedido-row"><span class="pedido-label">Dirección</span><span class="pedido-val">${pedido.addr}</span></div>
+          <div class="pedido-row"><span class="pedido-label">Ciudad</span><span class="pedido-val">${pedido.city}</span></div>
+          <div class="pedido-row"><span class="pedido-label">Documento</span><span class="pedido-val">${pedido.doc}</span></div>
+        </div>
+      </div>`;
+    if(pedido.status)fSelEstado(pedido.status,false);
+  } else {
+    document.getElementById('fheader-sub').textContent='Prime Logistic Spa';
+    document.getElementById('pedido-info-wrap').innerHTML='';
+  }
+  document.querySelectorAll('.eta-btn').forEach(el=>el.classList.remove('sel'));
+  document.getElementById('eta-manual').classList.remove('show');
+  document.getElementById('obs-area').classList.remove('show');
+  document.getElementById('obs-toggle').textContent='+ Agregar observación (opcional)';
+  document.getElementById('inp-obs').value='';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function volverTracking(){
+  document.getElementById('app-formulario').style.display='none';
+  document.getElementById('app-tracking').style.display='block';
+}
+
+function fSelEstado(s,vibrate=true){
+  document.querySelectorAll('.estado-btn').forEach(el=>{el.classList.remove('sel');['sel-retirado','sel-transito','sel-ruta','sel-entregado','sel-pendiente','sel-incidencia'].forEach(c=>el.classList.remove(c));});
+  const map={retirado:'sel-retirado',transito:'sel-transito',ruta:'sel-ruta',entregado:'sel-entregado',pendiente:'sel-pendiente',incidencia:'sel-incidencia'};
+  document.getElementById('eb-'+s).classList.add('sel',map[s]);
+  fEstado=s;
+  if(vibrate&&navigator.vibrate)navigator.vibrate(30);
+}
+
+function fSelEta(val){
+  document.querySelectorAll('.eta-btn').forEach(el=>el.classList.remove('sel'));
+  const el=document.getElementById('eta-'+val);if(el)el.classList.add('sel');
+  fEta=val;document.getElementById('eta-manual').classList.remove('show');
+  if(navigator.vibrate)navigator.vibrate(20);
+}
+function fMostrarEtaManual(){document.getElementById('eta-manual').classList.toggle('show');document.querySelectorAll('.eta-btn').forEach(el=>el.classList.remove('sel'));}
+function fSelEtaManual(val){fEta=val;document.querySelectorAll('.eta-btn').forEach(el=>el.classList.remove('sel'));}
+function fToggleObs(){fObsVisible=!fObsVisible;document.getElementById('obs-area').classList.toggle('show',fObsVisible);document.getElementById('obs-toggle').textContent=fObsVisible?'− Ocultar observación':'+ Agregar observación (opcional)';}
+
+function fEnviar(){
+  const obs=document.getElementById('inp-obs').value.trim();
+  const eta=fEta||(fPedidoData&&fPedidoData.eta&&fPedidoData.eta!=='—'?fPedidoData.eta:null);
+  const result={...(fPedidoData||{}),status:fEstado,eta:eta||'—',obs:obs,alert:fEstado==='incidencia'||fEstado==='pendiente',updatedAt:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})};
+  fResultData=result;
+  const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(result))));
+  const linkImport=getSelfURL()+'?import='+encoded;
+  const bc=badgeHex[fEstado];
+  document.getElementById('ok-sub').textContent=(fPedidoData?fPedidoData.client:'Pedido')+' — '+badgeLabel[fEstado]+(eta?' · ETA '+eta:'');
+  document.getElementById('ok-resumen').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--accent)">${result.id||'—'}</span>
+      <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:${bc}22;color:${bc}">${badgeLabel[fEstado]}</span>
+    </div>
+    <div style="font-size:12px;color:var(--muted)">Cliente: <span style="color:var(--text);font-weight:600">${result.client||'—'}</span></div>
+    <div style="font-size:12px;color:var(--muted);margin-top:4px">ETA: <span style="color:var(--accent);font-weight:700">${result.eta}</span></div>
+    ${obs?`<div style="font-size:12px;color:var(--muted);margin-top:4px">Obs: <span style="color:var(--text)">${obs}</span></div>`:''}
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--bdr)">
+      <div style="font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Link para importar al tracking</div>
+      <div onclick="copiar('${linkImport}','✅ Link copiado')" style="font-size:10px;font-family:var(--mono);color:var(--accent);background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:8px;padding:8px;word-break:break-all;line-height:1.5;cursor:pointer">${linkImport}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;text-align:center">Toca para copiar</div>
+    </div>`;
+  document.getElementById('f-pantalla-main').style.display='none';
+  document.getElementById('f-pantalla-ok').classList.add('show');
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(navigator.vibrate)navigator.vibrate([50,30,50]);
+}
+
+function fEnviarWA(){
+  const d=fResultData;if(!d)return;
+  const msg=(statusIcon[d.status]||'📦')+' *'+badgeLabel[d.status]+'* — Prime Logistic Spa\n\n👤 Cliente: '+(d.client||'—')+'\n📍 '+( d.addr||'—')+', '+(d.city||'—')+'\n📄 Doc: '+(d.doc||'—')+'\n🚗 Conductor: '+(d.driver||'—')+' · '+(d.plate||'—')+'\n🕐 ETA: '+d.eta+(d.obs?'\n📝 Obs: '+d.obs:'')+'\n\nActualizado: '+d.updatedAt;
+  const tel=d.telefono?d.telefono.replace(/[^0-9+]/g,''):'';
+  window.open(tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+
+function fReset(){
+  document.getElementById('f-pantalla-ok').classList.remove('show');
+  document.getElementById('f-pantalla-main').style.display='block';
+  fEstado='ruta';fEta=null;
+  document.querySelectorAll('.estado-btn').forEach(el=>{el.classList.remove('sel');['sel-retirado','sel-transito','sel-ruta','sel-entregado','sel-pendiente','sel-incidencia'].forEach(c=>el.classList.remove(c));});
+  document.getElementById('eb-ruta').classList.add('sel','sel-ruta');
+  document.querySelectorAll('.eta-btn').forEach(el=>el.classList.remove('sel'));
+  document.getElementById('eta-manual').classList.remove('show');
+  document.getElementById('obs-area').classList.remove('show');
+  document.getElementById('obs-toggle').textContent='+ Agregar observación (opcional)';
+  document.getElementById('inp-obs').value='';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// Detectar ?modo=formulario o ?pedido= en URL
+(function checkModo(){
+  const p=new URLSearchParams(window.location.search);
+  const pedidoRaw=p.get('pedido');
+  const modo=p.get('modo');
+  try{window.history.replaceState({},'',window.location.pathname);}catch(e){}
+  if(pedidoRaw){
+    try{
+      const o=JSON.parse(decodeURIComponent(escape(atob(pedidoRaw))));
+      abrirFormulario(o);
+    }catch(e){abrirFormulario(null);}
+  } else if(modo==='formulario'){
+    abrirFormulario(null);
+  }
+})();
+
+// INIT
+renderOrders('all');renderDrivers();renderHistory();
+populateWASelect();populateRemitenteSelect();populateQRSelect();
+updateTime();setInterval(updateTime,60000);
+document.getElementById('wa-pedido-select').addEventListener('change',previewWA);
+setTimeout(generarQRIngreso,300);
+</script>
+</body>
+</html>
