@@ -1019,6 +1019,50 @@ setInterval(()=>{
   }
 }, 300000);
 
+// Informe automático a las 18:00
+let _informeEnviado = false;
+setInterval(()=>{
+  const ahora = new Date();
+  const hora = ahora.getHours();
+  const minuto = ahora.getMinutes();
+  // A las 18:00 exacto
+  if(hora === 18 && minuto === 0 && !_informeEnviado){
+    _informeEnviado = true;
+    if(orders.length > 0){
+      // Guardar Excel automáticamente
+      guardarTodo();
+      // Mostrar notificación
+      mostrarNotificacion18();
+    }
+  }
+  // Resetear a las 18:01 para el día siguiente
+  if(hora === 18 && minuto === 1) _informeEnviado = false;
+}, 30000);
+
+function mostrarNotificacion18(){
+  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  const rate=total>0?Math.round(counts.entregado/total*100):0;
+  // Crear notificación visual
+  const notif=document.createElement('div');
+  notif.style.cssText='position:fixed;top:70px;right:20px;background:#111827;border:1px solid var(--accent);border-radius:14px;padding:16px 20px;z-index:999;max-width:300px;box-shadow:0 8px 32px rgba(0,0,0,.4)';
+  notif.innerHTML=`
+    <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px">🕕 Informe del día — 18:00</div>
+    <div style="font-size:12px;color:var(--text);line-height:1.8">
+      ✅ Entregados: ${counts.entregado}<br>
+      🔄 En ruta: ${counts.ruta}<br>
+      ⚠️ Pendientes: ${counts.pendiente}<br>
+      ❌ Incidencias: ${counts.incidencia}<br>
+      📊 OTIF: ${rate}%
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button onclick="sendWA();this.parentElement.parentElement.remove()" style="flex:1;padding:8px;background:#25d366;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">📲 Enviar WA</button>
+      <button onclick="this.parentElement.parentElement.remove()" style="padding:8px 12px;background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--bdr);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">✕</button>
+    </div>`;
+  document.body.appendChild(notif);
+  // Auto cerrar en 60 segundos
+  setTimeout(()=>{ if(notif.parentElement) notif.remove(); }, 60000);
+}
+
 // INIT
 renderTabla('tabla-pedidos-wrap');
 renderTabla('tabla-pedidos-wrap2');
