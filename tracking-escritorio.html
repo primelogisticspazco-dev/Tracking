@@ -82,7 +82,7 @@ html,body{height:100%;background:var(--dk);color:var(--text);font-family:var(--f
 .table-count{margin-left:auto;font-size:11px;color:var(--muted)}
 table{width:100%;border-collapse:collapse}
 th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;border-bottom:1px solid var(--bdr);background:rgba(255,255,255,.02);white-space:nowrap}
-td{padding:11px 14px;font-size:12px;border-bottom:1px solid var(--bdr);vertical-align:middle}
+td{padding:11px 14px;font-size:12px;border-bottom:1px solid var(--bdr);vertical-align:middle;word-break:break-word;max-width:200px}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(255,255,255,.02)}
 .td-id{font-family:var(--mono);font-size:11px;color:var(--muted)}
@@ -834,18 +834,35 @@ function leerExcel(file){
       const wb=XLSX.read(data,{type:'array'});
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(rows.length>0){
+        const colsDetectadas=Object.keys(rows[0]);
+        console.log('Columnas detectadas en Excel:',colsDetectadas);
+      }
       _excelPedidos=rows.map((r,i)=>{
         const doc=(r['Documento']||r['documento']||r['doc']||r['DOC']||'').toString().trim();
         const status=normStatus((r['Estado']||r['estado']||r['ESTADO']||'ruta').toString().trim());
-        const cliente=(r['Cliente']||r['cliente']||r['CLIENTE']||r['client']||r['Client']||'').toString().trim();
+        const cliente=(
+          r['Cliente']||r['cliente']||r['CLIENTE']||
+          r['client']||r['Client']||r['CLIENT']||
+          r['nombre cliente']||r['Nombre Cliente']||r['NOMBRE CLIENTE']||
+          r['nombre_cliente']||r['NombreCliente']||
+          r['razon social']||r['Razon Social']||r['RAZON SOCIAL']||
+          r['razón social']||r['Razón Social']||
+          r['nombre']||r['Nombre']||r['NOMBRE']||
+          ''
+        ).toString().trim();
+        const ciudad=(r['Ciudad']||r['ciudad']||r['CIUDAD']||'').toString().trim();
+        const region=(r['Region']||r['región']||r['Región']||r['region']||r['REGION']||'').toString().trim();
+        // Evitar duplicar ciudad en región
+        const regionFinal = region && region.toLowerCase()!==ciudad.toLowerCase() ? region : '';
         return {
           id:doc||'IMP-'+(i+1),
           remitente:(r['Remitente']||r['remitente']||r['REMITENTE']||'').toString().trim(),
           client:cliente||'Sin nombre',
           telefono:(r['Telefono']||r['telefono']||r['Teléfono']||r['teléfono']||r['TELEFONO']||'').toString().trim(),
           addr:(r['Direccion']||r['dirección']||r['Dirección']||r['direccion']||r['DIRECCION']||'').toString().trim(),
-          city:(r['Ciudad']||r['ciudad']||r['CIUDAD']||'').toString().trim(),
-          region:(r['Region']||r['región']||r['Región']||r['region']||r['REGION']||'').toString().trim(),
+          city:ciudad,
+          region:regionFinal,
           doc:doc,
           driver:(r['Conductor']||r['conductor']||r['CONDUCTOR']||'Por asignar').toString().trim(),
           plate:(r['Patente']||r['patente']||r['PATENTE']||'—').toString().trim().toUpperCase(),
