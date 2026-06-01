@@ -449,22 +449,9 @@ select.f-inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
 <div class="toast" id="toast"></div>
 
 <script>
-const orders=[
-  {id:'GD-0421',remitente:'Bodega Central Santiago',client:'Comercial Fuentes Ltda.',telefono:'+56912340001',addr:'Av. Grecia 2800',city:'Ñuñoa',region:'RM',status:'ruta',driver:'Carlos Vera',plate:'RVTK-32',eta:'13:30',doc:'GD-0421',alert:false},
-  {id:'GD-0422',remitente:'Planta Procesadora Sur',client:'Ferretería Del Sur',telefono:'+56912340002',addr:'San Martín 450',city:'Temuco',region:'Araucanía',status:'transito',driver:'Mario Soto',plate:'BNJK-91',eta:'10:30',doc:'GD-0422',alert:false},
-  {id:'GD-0423',remitente:'Distribuidora Prime Ltda.',client:'Supermercado La Unión',telefono:'+56912340003',addr:'Los Robles 120',city:'Concepción',region:'Biobío',status:'pendiente',driver:'Luis Pino',plate:'FXQZ-44',eta:'—',doc:'GD-0423',alert:true},
-  {id:'GD-0424',remitente:'Bodega Central Santiago',client:'Distribuidora Norte S.A.',telefono:'+56912340004',addr:'Alameda 3000',city:'Santiago',region:'RM',status:'entregado',driver:'Juan Mora',plate:'CGTY-17',eta:'Entregado',doc:'FAC-1190',alert:false},
-  {id:'GD-0425',remitente:'Planta Procesadora Sur',client:'Clínica Biobío',telefono:'+56912340005',addr:'Chacabuco 890',city:'Los Ángeles',region:'Biobío',status:'incidencia',driver:'Pedro Ríos',plate:'HLMP-55',eta:'—',doc:'GD-0425',alert:true},
-  {id:'GD-0426',remitente:'Distribuidora Prime Ltda.',client:'Librería Austral',telefono:'+56912340006',addr:'Arturo Prat 310',city:'Valdivia',region:'Los Ríos',status:'retirado',driver:'Sergio Ibáñez',plate:'JNTW-03',eta:'08:30',doc:'GD-0426',alert:false},
-];
-const historial=[
-  {event:'Entregado',detail:'Comercial Fuentes Ltda. · GD-0410',time:'12:48',color:'#10b981'},
-  {event:'Salida bodega',detail:'Ferretería Del Sur · GD-0422',time:'11:30',color:'#00d4aa'},
-  {event:'Incidencia registrada',detail:'Cliente ausente · GD-0418',time:'10:55',color:'#ef4444'},
-  {event:'Entregado',detail:'Distribuidora Norte · FAC-1185',time:'10:22',color:'#10b981'},
-  {event:'Retraso detectado',detail:'Tráfico ruta 5 sur · GD-0415',time:'09:40',color:'#f59e0b'},
-];
-const counts={retirado:4,transito:7,ruta:12,entregado:38,pendiente:5,incidencia:2};
+const orders=[];
+const historial=[];
+const counts={retirado:0,transito:0,ruta:0,entregado:0,pendiente:0,incidencia:0};
 const BL={ruta:'En Ruta',transito:'En Tránsito',entregado:'Entregado',pendiente:'Pendiente',incidencia:'Incidencia',retirado:'Retirado'};
 const BC={ruta:'badge-ruta',transito:'badge-transito',entregado:'badge-entregado',pendiente:'badge-pendiente',incidencia:'badge-incidencia',retirado:'badge-retirado'};
 const BH={ruta:'#00d4aa',transito:'#60a5fa',entregado:'#10b981',pendiente:'#f59e0b',incidencia:'#ef4444',retirado:'#a78bfa'};
