@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Prime Logistic Spa — Estado de tu pedido</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --dk:#0a0f1e;--card:#111827;--bdr:rgba(255,255,255,0.08);
+  --accent:#00d4aa;--warn:#f59e0b;--danger:#ef4444;--success:#10b981;
+  --blue:#60a5fa;--purple:#a78bfa;--text:#f0f4f8;--muted:#8892a4;
+  --font:'Outfit',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+html,body{min-height:100vh;background:var(--dk);color:var(--text);font-family:var(--font)}
+.app{width:100%;max-width:480px;margin:0 auto;padding:0 0 40px}
+
+/* HEADER */
+.header{background:#0d1a35;padding:20px 20px 16px;border-bottom:1px solid var(--bdr);text-align:center;margin-bottom:24px}
+.logo{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:6px}
+.title{font-size:22px;font-weight:800;margin-bottom:4px}
+.subtitle{font-size:12px;color:var(--muted);line-height:1.5}
+
+/* BUSCADOR */
+.search-wrap{padding:0 20px;margin-bottom:20px}
+.search-box{background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:20px}
+.search-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;display:block}
+.search-input-wrap{display:flex;gap:8px}
+.search-inp{flex:1;background:rgba(255,255,255,.05);border:1.5px solid var(--bdr);border-radius:10px;padding:12px 14px;font-size:15px;color:var(--text);font-family:var(--font);outline:none;transition:border-color .2s}
+.search-inp:focus{border-color:var(--accent)}
+.search-inp::placeholder{color:var(--muted);font-size:13px}
+.btn-buscar{padding:12px 20px;border-radius:10px;background:var(--accent);color:#0a0f1e;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:var(--font);transition:all .2s;white-space:nowrap}
+.btn-buscar:hover{filter:brightness(1.08)}
+.btn-buscar:active{transform:scale(.97)}
+
+/* RESULTADO */
+.result-wrap{padding:0 20px}
+.not-found{background:var(--card);border:1px solid rgba(239,68,68,.3);border-radius:14px;padding:24px;text-align:center}
+.not-found-icon{font-size:40px;margin-bottom:10px}
+.not-found-title{font-size:15px;font-weight:700;color:var(--danger);margin-bottom:6px}
+.not-found-sub{font-size:12px;color:var(--muted);line-height:1.6}
+
+/* PEDIDO CARD */
+.pedido-card{background:var(--card);border:1px solid var(--bdr);border-radius:16px;overflow:hidden;margin-bottom:12px}
+.pedido-header{padding:16px 18px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.pedido-doc{font-size:14px;font-weight:700;font-family:var(--mono);color:var(--accent)}
+.status-badge{font-size:10px;font-weight:700;padding:5px 12px;border-radius:20px;letter-spacing:.5px;text-transform:uppercase}
+.badge-ruta{background:rgba(0,212,170,.15);color:var(--accent)}
+.badge-transito{background:rgba(96,165,250,.15);color:var(--blue)}
+.badge-entregado{background:rgba(16,185,129,.15);color:var(--success)}
+.badge-pendiente{background:rgba(245,158,11,.15);color:var(--warn)}
+.badge-incidencia{background:rgba(239,68,68,.15);color:var(--danger)}
+.badge-retirado{background:rgba(167,139,250,.15);color:var(--purple)}
+
+/* ESTADO VISUAL */
+.estado-visual{padding:20px 18px;border-bottom:1px solid var(--bdr);text-align:center}
+.estado-icon-big{font-size:52px;margin-bottom:8px}
+.estado-nombre{font-size:20px;font-weight:800;margin-bottom:4px}
+.estado-desc{font-size:12px;color:var(--muted);line-height:1.5}
+
+/* PROGRESO */
+.progreso{padding:16px 18px;border-bottom:1px solid var(--bdr)}
+.prog-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:14px}
+.prog-steps{display:flex;align-items:center;justify-content:space-between;position:relative}
+.prog-step{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1}
+.prog-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid var(--bdr);background:rgba(255,255,255,.03);transition:all .3s;z-index:1}
+.prog-dot.done{background:var(--success);border-color:var(--success)}
+.prog-dot.active{background:var(--accent);border-color:var(--accent);box-shadow:0 0 12px rgba(0,212,170,.4)}
+.prog-dot.pending{background:rgba(255,255,255,.03);border-color:var(--bdr)}
+.prog-label{font-size:9px;color:var(--muted);font-weight:600;letter-spacing:.3px;text-transform:uppercase;text-align:center}
+.prog-label.active{color:var(--accent)}
+.prog-label.done{color:var(--success)}
+.prog-line{position:absolute;top:14px;left:14%;right:14%;height:2px;background:var(--bdr);z-index:0}
+.prog-line-fill{height:100%;background:var(--success);transition:width .5s ease}
+
+/* DETALLES */
+.detalles{padding:16px 18px}
+.det-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bdr);font-size:13px}
+.det-row:last-child{border-bottom:none}
+.det-label{color:var(--muted);font-weight:500}
+.det-val{font-weight:600;text-align:right;max-width:60%}
+.det-eta{color:var(--accent);font-weight:700;font-family:var(--mono)}
+
+/* ALERTA */
+.alerta-box{margin:0 18px 16px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px}
+.alerta-txt{font-size:12px;color:var(--danger);font-weight:600;line-height:1.4}
+
+/* MAPA */
+.mapa-wrap{margin:0 18px 16px;border-radius:12px;overflow:hidden;border:1px solid var(--bdr)}
+.mapa-header{padding:10px 14px;background:rgba(0,212,170,.06);border-bottom:1px solid var(--bdr);font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+#mapa-cliente{height:260px;width:100%}
+.mapa-addr{padding:8px 14px;font-size:11px;color:var(--muted);border-top:1px solid var(--bdr);line-height:1.5}
+.footer{text-align:center;padding:20px;font-size:11px;color:var(--muted);line-height:1.8}
+.footer-logo{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card);border:1px solid var(--accent);border-radius:10px;padding:10px 20px;font-size:12px;color:var(--accent);font-weight:700;transition:transform .3s;pointer-events:none;z-index:999;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="logo">Prime Logistic Spa</div>
+    <div class="title">Estado de tu pedido</div>
+    <div class="subtitle">Ingresa tu número de factura o guía de despacho para ver el estado de tu envío</div>
+  </div>
+
+  <div class="search-wrap">
+    <div class="search-box">
+      <label class="search-label">Número de Factura o GD</label>
+      <div class="search-input-wrap">
+        <input class="search-inp" id="inp-doc" placeholder="Ej: GD-0421 o 8636454" onkeydown="if(event.key==='Enter')buscarPedido()"/>
+        <button class="btn-buscar" onclick="buscarPedido()">Buscar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="result-wrap" id="result-wrap"></div>
+
+  <div class="footer">
+    <div class="footer-logo">Prime Logistic Spa</div>
+    <div>Seguimiento de entregas en tiempo real</div>
+    <div style="margin-top:4px;color:var(--muted2,#5a6578)">Para consultas llama a tu ejecutivo</div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const BL={ruta:'En Ruta',transito:'En Tránsito',entregado:'Entregado',pendiente:'Pendiente',incidencia:'Incidencia',retirado:'Retirado'};
+const BC={ruta:'badge-ruta',transito:'badge-transito',entregado:'badge-entregado',pendiente:'badge-pendiente',incidencia:'badge-incidencia',retirado:'badge-retirado'};
+const BI={ruta:'🔄',transito:'🚚',entregado:'✅',pendiente:'⏳',incidencia:'⚠️',retirado:'📦'};
+const BD={
+  ruta:'Tu pedido está en camino hacia tu dirección.',
+  transito:'Tu pedido está en tránsito hacia la zona de entrega.',
+  entregado:'Tu pedido fue entregado exitosamente.',
+  pendiente:'Tu pedido está pendiente de despacho.',
+  incidencia:'Hubo un inconveniente con tu entrega. Te contactaremos a la brevedad.',
+  retirado:'Tu pedido fue retirado desde bodega y pronto saldrá a ruta.'
+};
+const BC2={ruta:'var(--accent)',transito:'var(--blue)',entregado:'var(--success)',pendiente:'var(--warn)',incidencia:'var(--danger)',retirado:'var(--purple)'};
+
+// Pasos del progreso
+const PASOS=[
+  {key:'retirado',label:'Retirado',icon:'📦'},
+  {key:'transito',label:'Tránsito',icon:'🚚'},
+  {key:'ruta',label:'En Ruta',icon:'🔄'},
+  {key:'entregado',label:'Entregado',icon:'✅'},
+];
+const ORDEN={retirado:0,transito:1,ruta:2,entregado:3,pendiente:1,incidencia:2};
+
+// Leer pedidos desde URL ?data=
+function getPedidosURL(){
+  const p=new URLSearchParams(window.location.search);
+  const raw=p.get('data');
+  if(!raw) return [];
+  try{
+    return JSON.parse(decodeURIComponent(escape(atob(raw))));
+  }catch(e){return [];}
+}
+
+function buscarPedido(){
+  const doc=document.getElementById('inp-doc').value.trim().toUpperCase();
+  if(!doc){showToast('⚠️ Ingresa un número de documento');return;}
+  const pedidos=getPedidosURL();
+  const found=pedidos.find(o=>
+    (o.doc||'').toString().toUpperCase()===doc ||
+    (o.id||'').toString().toUpperCase()===doc ||
+    (o.doc||'').toString().toUpperCase().includes(doc) ||
+    doc.includes((o.doc||'').toString().toUpperCase())
+  );
+  mostrarResultado(found, doc);
+}
+
+function mostrarResultado(o, doc){
+  const wrap=document.getElementById('result-wrap');
+  if(!o){
+    wrap.innerHTML=`
+      <div class="not-found">
+        <div class="not-found-icon">🔍</div>
+        <div class="not-found-title">Pedido no encontrado</div>
+        <div class="not-found-sub">No encontramos ningún pedido con el número <strong>${doc}</strong>.<br>Verifica el número e intenta nuevamente.</div>
+      </div>`;
+    return;
+  }
+  const paso=ORDEN[o.status]??1;
+  const pct=Math.round((paso/3)*100);
+  const stepsHTML=PASOS.map((p,i)=>{
+    const cls=i<paso?'done':i===paso?'active':'pending';
+    const lblCls=i<paso?'done':i===paso?'active':'';
+    return `<div class="prog-step">
+      <div class="prog-dot ${cls}">${i<=paso?p.icon:'·'}</div>
+      <div class="prog-label ${lblCls}">${p.label}</div>
+    </div>`;
+  }).join('');
+  wrap.innerHTML=`
+    <div class="pedido-card">
+      <div class="pedido-header">
+        <span class="pedido-doc">${o.doc||o.id}</span>
+        <span class="status-badge ${BC[o.status]}">${BL[o.status]}</span>
+      </div>
+      <div class="estado-visual">
+        <div class="estado-icon-big">${BI[o.status]}</div>
+        <div class="estado-nombre" style="color:${BC2[o.status]}">${BL[o.status]}</div>
+        <div class="estado-desc">${BD[o.status]}</div>
+      </div>
+      ${o.status!=='incidencia'&&o.status!=='pendiente'?`
+      <div class="progreso">
+        <div class="prog-title">Progreso del envío</div>
+        <div class="prog-steps">
+          <div class="prog-line"><div class="prog-line-fill" style="width:${pct}%"></div></div>
+          ${stepsHTML}
+        </div>
+      </div>`:''}
+      ${o.alert?`<div class="alerta-box"><span style="font-size:20px">⚠️</span><div class="alerta-txt">Hay un inconveniente con tu pedido. Nuestro equipo está trabajando para resolverlo.</div></div>`:''}
+      <div class="detalles">
+        <div class="det-row"><span class="det-label">Cliente</span><span class="det-val">${o.client||'—'}</span></div>
+        <div class="det-row"><span class="det-label">Dirección</span><span class="det-val">${o.addr||'—'}</span></div>
+        <div class="det-row"><span class="det-label">Ciudad</span><span class="det-val">${o.city||'—'}</span></div>
+        <div class="det-row"><span class="det-label">Conductor</span><span class="det-val">${o.driver||'—'}</span></div>
+        <div class="det-row"><span class="det-label">Patente</span><span class="det-val" style="font-family:var(--mono)">${o.plate||'—'}</span></div>
+        <div class="det-row"><span class="det-label">ETA</span><span class="det-val det-eta">${o.eta||'—'}</span></div>
+      </div>
+    </div>
+    <div class="mapa-wrap">
+      <div class="mapa-header">📍 Ubicación de entrega</div>
+      <div id="mapa-cliente"></div>
+      <div class="mapa-addr">📍 ${o.addr||''}, ${o.city||''}</div>
+    </div>`;
+  // Iniciar mapa
+  iniciarMapa(o.addr||'', o.city||'');
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+let _mapa=null;
+
+function iniciarMapa(direccion, ciudad){
+  setTimeout(()=>{
+    const contenedor=document.getElementById('mapa-cliente');
+    if(!contenedor) return;
+    // Destruir mapa anterior si existe
+    if(_mapa){_mapa.remove();_mapa=null;}
+    // Coordenadas por defecto del sur de Chile
+    const coordsDefecto=obtenerCoordsCiudad(ciudad);
+    _mapa=L.map('mapa-cliente',{zoomControl:true,scrollWheelZoom:false}).setView(coordsDefecto,14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'© OpenStreetMap',maxZoom:19
+    }).addTo(_mapa);
+    // Ícono personalizado
+    const icono=L.divIcon({
+      html:`<div style="background:#00d4aa;width:32px;height:32px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>`,
+      iconSize:[32,32],iconAnchor:[16,32],popupAnchor:[0,-32],className:''
+    });
+    // Geocodificar dirección con Nominatim
+    const query=encodeURIComponent(direccion+', '+ciudad+', Chile');
+    fetch('https://nominatim.openstreetmap.org/search?format=json&q='+query+'&limit=1&countrycodes=cl')
+      .then(r=>r.json())
+      .then(data=>{
+        if(data&&data.length>0){
+          const lat=parseFloat(data[0].lat);
+          const lon=parseFloat(data[0].lon);
+          _mapa.setView([lat,lon],16);
+          L.marker([lat,lon],{icon:icono})
+            .addTo(_mapa)
+            .bindPopup(`<b style="font-family:Outfit,sans-serif">${direccion}</b><br><span style="font-size:11px;color:#666">${ciudad}</span>`)
+            .openPopup();
+        } else {
+          // Si no encuentra, usar coords de la ciudad
+          L.marker(coordsDefecto,{icon:icono})
+            .addTo(_mapa)
+            .bindPopup(`<b style="font-family:Outfit,sans-serif">${ciudad}</b>`)
+            .openPopup();
+        }
+      })
+      .catch(()=>{
+        L.marker(coordsDefecto,{icon:icono}).addTo(_mapa);
+      });
+  }, 300);
+}
+
+function obtenerCoordsCiudad(ciudad){
+  const coords={
+    'santiago':[-33.4489,-70.6693],'providencia':[-33.4327,-70.6082],
+    'ñuñoa':[-33.4569,-70.5987],'las condes':[-33.4109,-70.5745],
+    'temuco':[-38.7359,-72.5904],'concepción':[-36.8201,-73.0444],
+    'los angeles':[-37.4720,-72.3530],'valdivia':[-39.8142,-73.2459],
+    'osorno':[-40.5739,-73.1352],'puerto montt':[-41.4693,-72.9424],
+    'futrono':[-40.1236,-72.3894],'la union':[-40.2947,-72.9997],
+    'lago ranco':[-40.2089,-72.5246],'puerto varas':[-41.3186,-72.9821],
+    'chillan':[-36.6065,-72.1033],'rancagua':[-34.1708,-70.7444],
+    'talca':[-35.4264,-71.6554],'linares':[-35.8453,-71.5958],
+    'los rios':[-39.8142,-73.2459],'los lagos':[-40.3,-72.8],
+    'araucanía':[-38.7,-72.5],'biobío':[-37.0,-72.0],
+  };
+  const key=(ciudad||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  for(const k of Object.keys(coords)){
+    if(key.includes(k)||k.includes(key)) return coords[k];
+  }
+  return [-40.0,-72.5]; // Centro sur de Chile por defecto
+}
+
+// Auto buscar si viene ?doc= en URL
+(function(){
+  const p=new URLSearchParams(window.location.search);
+  const doc=p.get('doc');
+  if(doc){
+    document.getElementById('inp-doc').value=doc;
+    buscarPedido();
+  }
+})();
+</script>
+</body>
+</html>
