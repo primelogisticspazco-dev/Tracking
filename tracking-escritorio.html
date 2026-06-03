@@ -676,7 +676,8 @@ function resetForm(){
 
 // WA
 function buildWAMsg(o){
- return '📦 *Informe de entrega — Prime Logistic Spa*\n\n🏢 *Remitente:* '+(o.remitente||'—')+'\n👤 *Cliente:* '+o.client+'\n📍 *Dirección:* '+o.addr+'\n🏙 *Ciudad:* '+o.city+'\n📄 *Documento:* '+o.doc+'\n'+(SI[o.status]||'•')+' *Estado:* '+BL[o.status]+'\n🚗 *Conductor:* '+o.driver+'\n🔑 *Patente:* '+o.plate+'\n🕐 *ETA:* '+o.eta+'\n\n🗺️ *Ver ubicación:*\nhttps://maps.google.com/?q='+encodeURIComponent((o.addr||'')+', '+(o.city||'')+', Chile')+'\n\nFecha: '+new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})+'\nHora: '+new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+ return '📦 *Prime Logistic Spa*\n\n📄 *Doc:* '+o.doc+' | '+(SI[o.status]||'•')+' *'+BL[o.status]+'*'+'\n\n👤 *'+o.client+'*'+'\n📍 '+o.addr+', '+o.city+'\n\n🚚 '+o.driver+' | '+o.plate+'\n🕐 ETA: '+o.eta+'\n\n🗺️ https://maps.google.com/?q='+encodeURIComponent((o.addr||'')+', '+(o.city||'')+', Chile');
+
  } 
 function populateWASelects(o){
   ['wa-select','wa-rem-select'].forEach(id=>{
