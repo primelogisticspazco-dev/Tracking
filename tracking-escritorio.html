@@ -526,6 +526,7 @@ function renderTabla(containerId){
               <div class="td-actions">
                 ${o.status!=='entregado'?`<button class="act-btn act-entregado" onclick="marcarEntregado('${o.id}')">✅</button>`:''}
                 <button class="act-btn act-qr" onclick="abrirModalQR('${o.id}')">QR</button>
+                <button class="act-btn" style="background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.3)" onclick="linkCliente('${o.id}')">🔗</button>
                 ${o.telefono?`<button class="act-btn act-wa" onclick="waRapido('${o.id}')">WA</button>`:''}
                 <button class="act-btn act-edit" onclick="editarEstado('${o.id}')">Estado ▾</button>
               </div>
@@ -675,11 +676,24 @@ function resetForm(){
 }
 
 // WA
+function getMapsLink(o){
+  const query=encodeURIComponent((o.addr||'')+', '+(o.city||'')+', Chile');
+  return 'https://maps.google.com/?q='+query;
+}
 function buildWAMsg(o){
- return '📦 *Prime Logistic Spa*\n\n📄 *Doc:* '+o.doc+' | '+(SI[o.status]||'•')+' *'+BL[o.status]+'*'+'\n\n👤 *'+o.client+'*'+'\n📍 '+o.addr+', '+o.city+'\n\n🚚 '+o.driver+' | '+o.plate+'\n🕐 ETA: '+o.eta+'\n\n🗺️ https://maps.google.com/?q='+encodeURIComponent((o.addr||'')+', '+(o.city||'')+', Chile');
-
- } 
-function populateWASelects(o){
+  const mapsLink=getMapsLink(o);
+  const hora=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  const eta=o.eta&&o.eta!=='—'?o.eta:'Por confirmar';
+  return '*Prime Logistic Spa*\n'+
+    'Doc: '+o.doc+'\n\n'+
+    'Cliente: '+o.client+'\n'+
+    'Estado: '+(SI[o.status]||'•')+' '+BL[o.status]+' | ETA: '+eta+'\n'+
+    '📍 '+o.addr+', '+o.city+'\n'+
+    '🗺️ '+mapsLink+'\n'+
+    'Conductor: '+o.driver+' · '+o.plate+'\n\n'+
+    '_'+hora+'_';
+}
+function populateWASelects(){
   ['wa-select','wa-rem-select'].forEach(id=>{
     const sel=document.getElementById(id);if(!sel)return;
     const cur=sel.value;
@@ -726,11 +740,31 @@ function waRapido(id){
 }
 function buildMsgRemitente(remitente){
   const pedidos=orders.filter(o=>o.remitente===remitente);
-  const e=pedidos.filter(o=>o.status==='entregado').length;
-  const r=pedidos.filter(o=>o.status==='ruta'||o.status==='transito').length;
-  const p=pedidos.filter(o=>o.status==='pendiente').length;
-  const i=pedidos.filter(o=>o.status==='incidencia').length;
-  return '📦 *Informe — Prime Logistic Spa*\n'+new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})+'\n\n🏢 *Remitente:* '+remitente+'\n━━━━━━━━━━\n✅ Entregados: '+e+'\n🔄 En ruta: '+r+'\n⏳ Pendientes: '+p+(i>0?'\n❌ Incidencias: '+i:'')+'\n📦 Total: '+pedidos.length+'\n━━━━━━━━━━\n'+pedidos.map((o,idx)=>(idx+1)+'. '+o.client+'\n   📍 '+o.addr+', '+o.city+'\n   📄 '+o.doc+' · '+(SI[o.status]||'•')+' '+BL[o.status]+(o.eta&&o.eta!=='—'?' · 🕐 '+o.eta:'')).join('\n\n')+'\n\n🕐 '+new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  const entregados=pedidos.filter(o=>o.status==='entregado').length;
+  const enRuta=pedidos.filter(o=>o.status==='ruta').length;
+  const transito=pedidos.filter(o=>o.status==='transito').length;
+  const pendientes=pedidos.filter(o=>o.status==='pendiente').length;
+  const incidencias=pedidos.filter(o=>o.status==='incidencia').length;
+  const retirados=pedidos.filter(o=>o.status==='retirado').length;
+  const fecha=new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'-');
+  const movimientos=pedidos.slice(0,8).map(o=>{
+    const icon={ruta:'🚚',transito:'⏳',entregado:'✅',pendiente:'⚠️',incidencia:'❌',retirado:'📦'}[o.status]||'•';
+    return o.doc+' | '+icon+' '+BL[o.status]+' | '+o.city;
+  }).join('\n');
+  let resumen='';
+  if(entregados>0) resumen+='✅ Entregados: '+entregados+'  ';
+  if(enRuta>0) resumen+='🚚 En Ruta: '+enRuta+'  ';
+  if(transito>0) resumen+='⏳ En Tránsito: '+transito+'  ';
+  if(pendientes>0) resumen+='⚠️ Pendientes: '+pendientes+'  ';
+  if(incidencias>0) resumen+='❌ Incidencias: '+incidencias+'  ';
+  if(retirados>0) resumen+='📦 Retirados: '+retirados;
+  return '📦 *Prime Logistic Spa*\n'+
+    '📋 Resumen Diario - '+remitente+'\n\n'+
+    'Total despachos: '+pedidos.length+'\n'+
+    resumen.trim()+'\n\n'+
+    'Últimos movimientos:\n'+
+    movimientos+'\n\n'+
+    'Fecha: '+fecha;
 }
 function enviarWARemitente(){
   const r=document.getElementById('wa-rem-select').value;
@@ -963,6 +997,24 @@ function exportarPedidos(){
   const fecha=new Date().toLocaleDateString('es-CL').replace(/\//g,'-');
   XLSX.writeFile(wb,'pedidos-prime-logistic-'+fecha+'.xlsx');
   showToast('✅ Exportado correctamente');
+}
+
+function linkCliente(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  const encoded=btoa(unescape(encodeURIComponent(JSON.stringify([o]))));
+  const base=window.location.href.split('tracking-escritorio.html')[0];
+  const link=base+'tracking-cliente.html?data='+encoded;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(link).then(()=>{
+      showToast('✅ Link de '+o.client+' copiado');
+    });
+  }
+  // Enviar por WA si tiene teléfono
+  if(o.telefono){
+    const tel=o.telefono.replace(/[^0-9+]/g,'');
+    const msg=encodeURIComponent('📦 *Prime Logistic Spa*\n\nHola '+o.client+', puedes ver el estado de tu pedido aquí:\n'+link);
+    setTimeout(()=>window.open('https://wa.me/'+tel+'?text='+msg,'_blank'),500);
+  }
 }
 
 function compartirLinkCliente(){
