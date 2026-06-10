@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Prime Logistic Spa — Escritorio</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --dk:#0a0f1e;--sidebar:#0d1525;--card:#111827;--card2:#161f30;
+  --bdr:rgba(255,255,255,0.07);--bdr2:rgba(255,255,255,0.12);
+  --accent:#00d4aa;--accent2:#0066ff;--warn:#f59e0b;
+  --danger:#ef4444;--success:#10b981;--blue:#60a5fa;--purple:#a78bfa;
+  --text:#f0f4f8;--muted:#8892a4;--muted2:#5a6578;
+  --font:'Outfit',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+html,body{height:100%;background:var(--dk);color:var(--text);font-family:var(--font);overflow:hidden}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:220px 1fr 340px;grid-template-rows:56px 1fr;height:100vh;gap:0}
+.topbar{grid-column:1/-1;background:var(--sidebar);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 20px;gap:20px;z-index:50}
+.sidebar{grid-row:2;background:var(--sidebar);border-right:1px solid var(--bdr);padding:16px 0;overflow-y:auto}
+.main{grid-row:2;overflow-y:auto;padding:20px}
+.rightpanel{grid-row:2;background:var(--sidebar);border-left:1px solid var(--bdr);overflow-y:auto;padding:16px}
+
+/* TOPBAR */
+.logo{font-size:13px;font-weight:800;letter-spacing:2px;color:var(--accent);text-transform:uppercase;white-space:nowrap}
+.live-badge{display:flex;align-items:center;gap:5px;background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.3);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;color:var(--accent)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.topbar-title{font-size:15px;font-weight:700;margin-left:4px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.time-badge{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.btn-top{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:var(--font);transition:all .15s}
+.btn-wa-top{background:#25d366;color:#fff}
+.btn-clear-top{background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.25)}
+
+/* SIDEBAR NAV */
+.nav-section{font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:1.2px;text-transform:uppercase;padding:0 16px;margin-bottom:6px;margin-top:16px}
+.nav-section:first-child{margin-top:0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s;border-left:2px solid transparent;margin:1px 0}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.nav-item.active{color:var(--accent);background:rgba(0,212,170,.06);border-left-color:var(--accent)}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+.nav-badge{margin-left:auto;background:rgba(239,68,68,.2);color:var(--danger);border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700}
+.nav-badge.green{background:rgba(0,212,170,.15);color:var(--accent)}
+
+/* KPI STRIP */
+.kpi-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px}
+.kpi-box{background:var(--card);border:1px solid var(--bdr);border-radius:12px;padding:14px 12px}
+.kpi-box-label{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.kpi-box-val{font-size:24px;font-weight:800;font-family:var(--mono);line-height:1}
+.kpi-box-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.kpi-bar{height:3px;background:rgba(255,255,255,.06);border-radius:2px;margin-top:8px;overflow:hidden}
+.kpi-fill{height:100%;border-radius:2px}
+
+/* OTIF BIG */
+.otif-big{background:var(--card);border:1px solid var(--accent);border-radius:14px;padding:16px;display:flex;align-items:center;gap:16px;margin-bottom:20px;position:relative;overflow:hidden}
+.otif-big-num{font-size:52px;font-weight:800;font-family:var(--mono);color:var(--accent);line-height:1}
+.otif-big-info{flex:1}
+.otif-big-title{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.otif-big-sub{font-size:12px;color:var(--muted);line-height:1.6}
+.otif-bg{position:absolute;right:-20px;top:-10px;font-size:120px;font-weight:900;color:rgba(0,212,170,.04);font-family:var(--mono);pointer-events:none}
+
+/* STATUS CHIPS */
+.status-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.chip{padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--bdr);background:rgba(255,255,255,.03);transition:all .15s;white-space:nowrap}
+.chip:hover{border-color:rgba(255,255,255,.2)}
+.chip.active{border-color:var(--accent);background:rgba(0,212,170,.08);color:var(--accent)}
+.chip-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+
+/* TABLA */
+.table-wrap{background:var(--card);border:1px solid var(--bdr);border-radius:14px;overflow:hidden}
+.table-header{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--bdr);gap:10px}
+.table-title{font-size:13px;font-weight:700}
+.search-inp{background:rgba(255,255,255,.05);border:1px solid var(--bdr);border-radius:8px;padding:7px 12px;font-size:12px;color:var(--text);font-family:var(--font);outline:none;width:220px;transition:border-color .2s}
+.search-inp:focus{border-color:var(--accent)}
+.search-inp::placeholder{color:var(--muted)}
+.table-count{margin-left:auto;font-size:11px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;table-layout:auto}
+th{padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;border-bottom:1px solid var(--bdr);background:rgba(255,255,255,.02);white-space:nowrap}
+td{padding:10px 12px;font-size:12px;border-bottom:1px solid var(--bdr);vertical-align:middle;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.td-id{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.td-client{font-weight:600;font-size:12px;white-space:normal;max-width:180px}
+.td-remitente{font-size:11px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.badge{font-size:9px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
+.badge-ruta{background:rgba(0,212,170,.15);color:var(--accent)}
+.badge-transito{background:rgba(96,165,250,.15);color:var(--blue)}
+.badge-entregado{background:rgba(16,185,129,.15);color:var(--success)}
+.badge-pendiente{background:rgba(245,158,11,.15);color:var(--warn)}
+.badge-incidencia{background:rgba(239,68,68,.15);color:var(--danger)}
+.badge-retirado{background:rgba(167,139,250,.15);color:var(--purple)}
+.td-eta{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:600}
+.td-actions{display:flex;gap:4px;justify-content:flex-end;flex-wrap:nowrap}
+.act-btn{padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:none;font-family:var(--font);transition:all .15s;white-space:nowrap;flex-shrink:0}
+.act-btn:hover{filter:brightness(1.15)}
+.act-entregado{background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)}
+.act-wa{background:#25d366;color:#fff}
+.act-qr{background:rgba(0,212,170,.1);color:var(--accent);border:1px solid rgba(0,212,170,.3)}
+.act-edit{background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--bdr)}
+.alert-row-table{display:flex;align-items:center;gap:4px;margin-top:4px;font-size:10px;color:var(--danger)}
+
+/* FORMULARIO LATERAL */
+.panel-title{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}
+.f-group{margin-bottom:10px}
+.f-label{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.5px;margin-bottom:4px;display:block}
+.f-inp{background:rgba(255,255,255,.05);border:1px solid var(--bdr);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--text);font-family:var(--font);outline:none;width:100%;transition:border-color .2s}
+.f-inp:focus{border-color:var(--accent)}
+.f-inp::placeholder{color:var(--muted);font-size:11px}
+.f-row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+select.f-inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238892a4' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-color:rgba(255,255,255,.05);padding-right:28px}
+.btn-add{width:100%;padding:10px;border-radius:8px;background:var(--accent);color:#0a0f1e;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:var(--font);transition:all .15s;margin-top:4px}
+.btn-add:hover{filter:brightness(1.08)}
+.btn-reset{width:100%;padding:8px;border-radius:8px;background:rgba(255,255,255,.05);color:var(--muted);font-size:12px;font-weight:600;border:1px solid var(--bdr);cursor:pointer;font-family:var(--font);margin-top:6px}
+
+/* PANEL DIVIDER */
+.panel-divider{height:1px;background:var(--bdr);margin:16px 0}
+
+/* HISTORIAL LATERAL */
+.hist-item{display:flex;gap:8px;margin-bottom:12px}
+.hist-dot-sm{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.hist-text{font-size:11px;font-weight:600}
+.hist-detail-sm{font-size:10px;color:var(--muted);margin-top:1px}
+.hist-time-sm{font-size:10px;color:var(--muted2);font-family:var(--mono);margin-left:auto;white-space:nowrap}
+
+/* WA PANEL */
+.wa-select{width:100%;margin-bottom:8px}
+.btn-wa-panel{width:100%;padding:9px;border-radius:8px;background:#25d366;color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:var(--font);margin-bottom:6px}
+.btn-wa-panel.secondary{background:rgba(37,211,102,.1);color:#25d366;border:1px solid rgba(37,211,102,.3)}
+
+/* MODAL QR */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--card2);border:1px solid var(--bdr2);border-radius:18px;padding:24px;min-width:300px;text-align:center;position:relative}
+.modal-close{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.08);border:none;color:var(--muted);border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:4px}
+.modal-sub{font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5}
+.modal-qr{background:#fff;border-radius:12px;padding:12px;display:inline-block;margin-bottom:10px}
+.modal-doc{font-size:11px;font-weight:700;color:#0a0f1e;font-family:monospace;margin-top:4px}
+.modal-btns{display:flex;gap:8px;margin-top:12px}
+.modal-btn{flex:1;padding:9px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);border:none;transition:all .15s}
+.modal-btn-copy{background:rgba(0,212,170,.1);color:var(--accent);border:1px solid rgba(0,212,170,.3)!important;border:none}
+.modal-btn-wa{background:#25d366;color:#fff}
+
+/* CONFIRM */
+.confirm-box{background:var(--card2);border:1px solid rgba(239,68,68,.3);border-radius:16px;padding:24px;min-width:320px;text-align:center}
+.confirm-title{font-size:16px;font-weight:700;margin-bottom:8px}
+.confirm-sub{font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.5}
+.confirm-btns{display:flex;gap:8px}
+.cbtn{flex:1;padding:10px;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--font);cursor:pointer;border:none;transition:all .15s}
+.cbtn-cancel{background:rgba(255,255,255,.06);color:var(--muted)}
+.cbtn-confirm{background:var(--danger);color:#fff}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card2);border:1px solid var(--accent);border-radius:10px;padding:10px 20px;font-size:12px;color:var(--accent);font-weight:700;transition:transform .3s;pointer-events:none;white-space:nowrap;z-index:999}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <span class="logo">Prime Logistic</span>
+    <span style="color:var(--bdr2);font-size:18px">|</span>
+    <span class="topbar-title">Sistema de Tracking</span>
+    <span class="live-badge"><span class="live-dot"></span>En vivo</span>
+    <div class="topbar-right">
+      <span class="time-badge" id="top-time"></span>
+      <button class="btn-top" style="background:rgba(0,212,170,.15);color:var(--accent);border:1px solid rgba(0,212,170,.3)" onclick="guardarTodo()">💾 Guardar</button>
+      <button class="btn-top" style="background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3)" onclick="compartirLinkCliente()">🔗 Link cliente</button>
+      <button class="btn-top btn-wa-top" onclick="sendWA()">📲 Resumen WA</button>
+      <button class="btn-top btn-clear-top" onclick="confirmClear()">🗑 Limpiar</button>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="nav-section">Panel</div>
+    <div class="nav-item active" onclick="setView('dashboard',this)"><span class="nav-icon">📊</span>Dashboard</div>
+    <div class="nav-item" onclick="setView('pedidos',this)"><span class="nav-icon">📦</span>Pedidos<span class="nav-badge" id="nb-alerta">2</span></div>
+    <div class="nav-item" onclick="setView('kpi',this)"><span class="nav-icon">📈</span>KPIs</div>
+
+    <div class="nav-section">Entregas</div>
+    <div class="nav-item" onclick="filtrarNav('ruta',this)"><span class="nav-icon">🔄</span>En Ruta<span class="nav-badge green" id="nb-ruta">12</span></div>
+    <div class="nav-item" onclick="filtrarNav('transito',this)"><span class="nav-icon">🚚</span>En Tránsito<span class="nav-badge green" id="nb-transito">7</span></div>
+    <div class="nav-item" onclick="filtrarNav('pendiente',this)"><span class="nav-icon">⏳</span>Pendientes<span class="nav-badge" id="nb-pendiente">5</span></div>
+    <div class="nav-item" onclick="filtrarNav('incidencia',this)"><span class="nav-icon">⚠️</span>Incidencias<span class="nav-badge" id="nb-incidencia">2</span></div>
+    <div class="nav-item" onclick="filtrarNav('entregado',this)"><span class="nav-icon">✅</span>Entregados<span class="nav-badge green" id="nb-entregado">38</span></div>
+    <div class="nav-item" onclick="filtrarNav('retirado',this)"><span class="nav-icon">📦</span>Retirados<span class="nav-badge green" id="nb-retirado">4</span></div>
+
+    <div class="nav-section">Herramientas</div>
+    <div class="nav-item" onclick="setView('qr',this)"><span class="nav-icon">📷</span>QR Pedidos</div>
+    <div class="nav-item" onclick="setView('excel',this)"><span class="nav-icon">📊</span>Importar Excel</div>
+    <div class="nav-item" onclick="setView('historial',this)"><span class="nav-icon">📋</span>Historial</div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="main-content">
+
+    <!-- DASHBOARD -->
+    <div id="view-dashboard">
+      <div class="otif-big">
+        <div class="otif-bg">OTIF</div>
+        <div class="otif-big-num" id="otif-num">91%</div>
+        <div class="otif-big-info">
+          <div class="otif-big-title">OTIF del día</div>
+          <div class="otif-big-sub" id="otif-sub">38 de 42 entregas correctas · Meta: 95%</div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div style="font-size:11px;color:var(--muted)">Última actualización</div>
+          <div style="font-size:13px;font-weight:700;color:var(--accent)" id="otif-time">—</div>
+        </div>
+      </div>
+
+      <div class="kpi-strip">
+        <div class="kpi-box"><div class="kpi-box-label">Entregados</div><div class="kpi-box-val" style="color:var(--success)" id="k-entregado">38</div><div class="kpi-box-sub">de 42 programados</div><div class="kpi-bar"><div class="kpi-fill" style="width:90%;background:var(--success)"></div></div></div>
+        <div class="kpi-box"><div class="kpi-box-label">En Ruta</div><div class="kpi-box-val" style="color:var(--accent)" id="k-ruta">12</div><div class="kpi-box-sub">activos ahora</div><div class="kpi-bar"><div class="kpi-fill" id="kbar-ruta" style="background:var(--accent)"></div></div></div>
+        <div class="kpi-box"><div class="kpi-box-label">Pendientes</div><div class="kpi-box-val" style="color:var(--warn)" id="k-pendiente">5</div><div class="kpi-box-sub">requieren atención</div><div class="kpi-bar"><div class="kpi-fill" id="kbar-pendiente" style="background:var(--warn)"></div></div></div>
+        <div class="kpi-box"><div class="kpi-box-label">Incidencias</div><div class="kpi-box-val" style="color:var(--danger)" id="k-incidencia">2</div><div class="kpi-box-sub">4.8% del total</div><div class="kpi-bar"><div class="kpi-fill" id="kbar-incidencia" style="background:var(--danger)"></div></div></div>
+        <div class="kpi-box"><div class="kpi-box-label">Tránsito</div><div class="kpi-box-val" style="color:var(--blue)" id="k-transito">7</div><div class="kpi-box-sub">en camino</div><div class="kpi-bar"><div class="kpi-fill" id="kbar-transito" style="background:var(--blue)"></div></div></div>
+        <div class="kpi-box"><div class="kpi-box-label">Retirados</div><div class="kpi-box-val" style="color:var(--purple)" id="k-retirado">4</div><div class="kpi-box-sub">desde bodega</div><div class="kpi-bar"><div class="kpi-fill" id="kbar-retirado" style="background:var(--purple)"></div></div></div>
+      </div>
+
+      <div id="tabla-pedidos-wrap"></div>
+    </div>
+
+    <!-- PEDIDOS -->
+    <div id="view-pedidos" style="display:none">
+      <div id="filtro-header"></div>
+      <div id="tabla-pedidos-wrap2"></div>
+    </div>
+
+    <!-- KPI -->
+    <div id="view-kpi" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:20px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px">Rendimiento semanal</div>
+          <svg width="100%" viewBox="0 0 400 120"><line x1="10" y1="100" x2="390" y2="100" stroke="#1e2a3a" stroke-width="0.5"/><polyline points="30,75 90,58 150,42 210,62 270,28 330,44 390,35" fill="none" stroke="#00d4aa" stroke-width="2.5" stroke-linejoin="round"/><circle cx="30" cy="75" r="4" fill="#00d4aa"/><circle cx="90" cy="58" r="4" fill="#00d4aa"/><circle cx="150" cy="42" r="4" fill="#00d4aa"/><circle cx="210" cy="62" r="4" fill="#00d4aa"/><circle cx="270" cy="28" r="4" fill="#00d4aa"/><circle cx="330" cy="44" r="4" fill="#00d4aa"/><circle cx="390" cy="35" r="4" fill="#00d4aa"/><text x="30" y="116" text-anchor="middle" fill="#8892a4" font-size="10" font-family="Outfit">Lun</text><text x="90" y="116" text-anchor="middle" fill="#8892a4" font-size="10" font-family="Outfit">Mar</text><text x="150" y="116" text-anchor="middle" fill="#8892a4" font-size="10" font-family="Outfit">Mié</text><text x="210" y="116" text-anchor="middle" fill="#8892a4" font-size="10" font-family="Outfit">Jue</text><text x="270" y="116" text-anchor="middle" fill="#8892a4" font-size="10" font-family="Outfit">Vie</text><text x="330" y="116" text-anchor="middle" fill="#8892a4" font-size="10" font-family="Outfit">Sáb</text><text x="390" y="116" text-anchor="middle" fill="#8892a4" font-size="10" font-family="Outfit">Hoy</text></svg>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:20px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px">Distribución de estados</div>
+          <div id="kpi-dist"></div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:20px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px">Métricas clave</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Tiempo promedio</div><div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--blue)">2.4h</div><div style="font-size:10px;color:var(--muted)">retiro a entrega</div></div>
+            <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Puntualidad</div><div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--accent)">86%</div><div style="font-size:10px;color:var(--muted)">a tiempo</div></div>
+            <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Km totales</div><div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--warn)">1,240</div><div style="font-size:10px;color:var(--muted)">hoy</div></div>
+            <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Satisfacción</div><div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--purple)">4.7</div><div style="font-size:10px;color:var(--muted)">promedio</div></div>
+          </div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--accent);border-radius:14px;padding:20px;position:relative;overflow:hidden">
+          <div style="position:absolute;right:-10px;top:-10px;font-size:100px;font-weight:900;color:rgba(0,212,170,.04);font-family:var(--mono)">OTIF</div>
+          <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">OTIF período</div>
+          <div style="font-size:56px;font-weight:800;font-family:var(--mono);color:var(--accent);line-height:1" id="kpi-otif-big">91%</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px">Meta: 95% · Δ –4 puntos</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR -->
+    <div id="view-qr" style="display:none">
+      <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:20px;max-width:600px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px">QR por factura / GD</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6">Selecciona el pedido, genera su QR e imprímelo en la factura o guía de despacho. El conductor lo escanea y el formulario se abre con todos los datos precargados.</div>
+        <select class="f-inp" id="qr-select-desktop" onchange="generarQRDesktop()" style="margin-bottom:16px">
+          <option value="">— Selecciona un pedido —</option>
+        </select>
+        <div id="qr-desktop-result" style="display:none;text-align:center">
+          <div style="background:#fff;border-radius:14px;padding:16px;display:inline-block;margin-bottom:12px">
+            <div id="qr-desktop-box"></div>
+            <div id="qr-desktop-label" style="font-size:12px;font-weight:700;color:#0a0f1e;font-family:monospace;margin-top:8px"></div>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:14px">El conductor escanea → formulario con datos precargados</div>
+          <div style="display:flex;gap:8px;justify-content:center">
+            <button class="act-btn act-qr" style="padding:9px 18px;font-size:12px" onclick="copiarLinkQRDesktop()">📋 Copiar link</button>
+            <button class="act-btn act-wa" style="padding:9px 18px;font-size:12px" onclick="waQRDesktop()">📲 Enviar WA</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXCEL -->
+    <div id="view-excel" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px">
+
+        <!-- IMPORTAR -->
+        <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:20px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:6px">📥 Importar desde Excel</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px">Sube tu planilla con los pedidos del día. Se cargarán automáticamente en el sistema.</div>
+
+          <div id="excel-dropzone" style="border:2px dashed var(--bdr2);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:14px"
+            onclick="document.getElementById('excel-file-input').click()"
+            ondragover="excelDragOver(event)" ondragleave="excelDragLeave(event)" ondrop="excelDrop(event)">
+            <div style="font-size:36px;margin-bottom:8px">📊</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">Arrastra tu Excel aquí</div>
+            <div style="font-size:11px;color:var(--muted)">o haz clic para seleccionar · .xlsx / .xls / .csv</div>
+          </div>
+          <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarExcel(this)"/>
+
+          <div id="excel-preview" style="display:none">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px">Vista previa</div>
+            <div id="excel-preview-table" style="overflow-x:auto;max-height:300px;overflow-y:auto;border:1px solid var(--bdr);border-radius:8px"></div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button style="flex:1;padding:10px;border-radius:8px;background:var(--accent);color:#0a0f1e;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)" onclick="confirmarImport()">✅ Importar <span id="excel-count">0</span> pedidos</button>
+              <button style="padding:10px 16px;border-radius:8px;background:rgba(255,255,255,.06);color:var(--muted);font-size:12px;font-weight:700;border:1px solid var(--bdr);cursor:pointer;font-family:var(--font)" onclick="cancelarImport()">Cancelar</button>
+            </div>
+          </div>
+          <div id="excel-result" style="display:none;padding:10px;border-radius:8px;font-size:12px;margin-top:10px"></div>
+        </div>
+
+        <!-- PLANTILLA -->
+        <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:20px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:6px">📋 Plantilla Excel</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px">Descarga la plantilla con el formato correcto para llenar tus pedidos del día.</div>
+
+          <button onclick="descargarPlantilla()" style="width:100%;padding:11px;border-radius:8px;background:rgba(0,212,170,.1);color:var(--accent);border:1px solid rgba(0,212,170,.3);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">
+            ⬇️ Descargar plantilla .xlsx
+          </button>
+
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--bdr)">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">Exportar pedidos actuales</div>
+            <button onclick="exportarPedidos()" style="width:100%;padding:10px;border-radius:8px;background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.3);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">
+              📤 Exportar lista actual a Excel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORIAL -->
+    <div id="view-historial" style="display:none">
+      <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:20px;max-width:600px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:16px">Historial de eventos</div>
+        <div id="hist-desktop"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="rightpanel">
+
+    <!-- NUEVO PEDIDO -->
+    <div class="panel-title">Nuevo pedido</div>
+    <div class="f-group"><label class="f-label">Remitente</label><input class="f-inp" id="f-remitente" placeholder="Bodega / empresa" onkeydown="enterGuardar(event)"/></div>
+    <div class="f-group"><label class="f-label">Cliente final</label><input class="f-inp" id="f-cliente" placeholder="Nombre del cliente" onkeydown="enterGuardar(event)"/></div>
+    <div class="f-group"><label class="f-label">Teléfono WA</label><input class="f-inp" id="f-tel" placeholder="+56912345678" type="tel" onkeydown="enterGuardar(event)"/></div>
+    <div class="f-group"><label class="f-label">Dirección</label><input class="f-inp" id="f-dir" placeholder="Av. Providencia 1234" onkeydown="enterGuardar(event)"/></div>
+    <div class="f-row2">
+      <div class="f-group"><label class="f-label">Ciudad</label><input class="f-inp" id="f-ciudad" placeholder="Santiago" onkeydown="enterGuardar(event)"/></div>
+      <div class="f-group"><label class="f-label">Región</label>
+        <select class="f-inp" id="f-region">
+          <option value="RM">RM</option><option value="O'Higgins">O'Higgins</option>
+          <option value="Maule">Maule</option><option value="Biobío">Biobío</option>
+          <option value="Araucanía">Araucanía</option><option value="Los Ríos">Los Ríos</option>
+        </select>
+      </div>
+    </div>
+    <div class="f-row2">
+      <div class="f-group"><label class="f-label">Tipo doc</label>
+        <select class="f-inp" id="f-tipo"><option value="GD">GD</option><option value="FAC">Factura</option><option value="OC">OC</option></select>
+      </div>
+      <div class="f-group"><label class="f-label">Número</label><input class="f-inp" id="f-ndoc" placeholder="00123" onkeydown="enterGuardar(event)"/></div>
+    </div>
+    <div class="f-row2">
+      <div class="f-group"><label class="f-label">Conductor</label><input class="f-inp" id="f-conductor" placeholder="Nombre" onkeydown="enterGuardar(event)"/></div>
+      <div class="f-group"><label class="f-label">Patente</label><input class="f-inp" id="f-patente" placeholder="ABCD-12" onkeydown="enterGuardar(event)" style="text-transform:uppercase"/></div>
+    </div>
+    <div class="f-group"><label class="f-label">ETA</label>
+      <select class="f-inp" id="f-eta">
+        <option value="08:30">08:30</option><option value="10:30">10:30</option>
+        <option value="11:30">11:30</option><option value="12:30">12:30</option>
+        <option value="13:30" selected>13:30</option>
+      </select>
+    </div>
+    <div class="f-group"><label class="f-label">Estado</label>
+      <select class="f-inp" id="f-status">
+        <option value="retirado">Retirado</option><option value="transito">En Tránsito</option>
+        <option value="ruta" selected>En Ruta</option><option value="pendiente">Pendiente</option>
+      </select>
+    </div>
+    <button class="btn-add" onclick="agregarPedido()">+ Agregar pedido <span style="opacity:.6;font-size:11px">(Enter)</span></button>
+    <button class="btn-reset" onclick="resetForm()">Limpiar formulario (Esc)</button>
+
+    <div class="panel-divider"></div>
+
+    <!-- WHATSAPP -->
+    <div class="panel-title">WhatsApp</div>
+    <select class="f-inp wa-select" id="wa-select" onchange="previewWA()">
+      <option value="">— Pedido individual —</option>
+    </select>
+    <div id="wa-prev" style="display:none;background:rgba(37,211,102,.06);border:1px solid rgba(37,211,102,.2);border-radius:8px;padding:10px;font-size:10px;line-height:1.7;color:var(--text);white-space:pre-wrap;font-family:var(--mono);margin-bottom:8px;max-height:120px;overflow-y:auto"></div>
+    <button class="btn-wa-panel" onclick="enviarWAIndividual()">📲 Enviar al cliente</button>
+    <select class="f-inp wa-select" id="wa-rem-select" onchange="previewWARem()">
+      <option value="">— Por remitente —</option>
+    </select>
+    <div id="wa-rem-prev" style="display:none;background:rgba(37,211,102,.06);border:1px solid rgba(37,211,102,.2);border-radius:8px;padding:10px;font-size:10px;line-height:1.7;color:var(--text);white-space:pre-wrap;font-family:var(--mono);margin-bottom:8px;max-height:100px;overflow-y:auto"></div>
+    <button class="btn-wa-panel secondary" onclick="enviarWARemitente()">📲 Enviar al remitente</button>
+
+    <div class="panel-divider"></div>
+
+    <!-- HISTORIAL LATERAL -->
+    <div class="panel-title">Últimos eventos</div>
+    <div id="hist-lateral"></div>
+
+  </div>
+</div>
+
+<!-- MODAL QR -->
+<div class="modal-overlay" id="modal-qr">
+  <div class="modal-box">
+    <button class="modal-close" onclick="cerrarModal()">✕</button>
+    <div class="modal-title" id="modal-title">QR del pedido</div>
+    <div class="modal-sub" id="modal-sub"></div>
+    <div class="modal-qr"><div id="modal-qr-box"></div><div class="modal-doc" id="modal-doc"></div></div>
+    <div class="modal-btns">
+      <button class="modal-btn modal-btn-copy" onclick="copiarModalLink()">📋 Copiar link</button>
+      <button class="modal-btn modal-btn-wa" onclick="waModal()">📲 WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRM -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="confirm-box">
+    <div style="font-size:32px;margin-bottom:12px">🗑</div>
+    <div class="confirm-title">Limpiar todos los pedidos</div>
+    <div class="confirm-sub">Se eliminarán todos los pedidos y se resetearán los contadores.</div>
+    <div class="confirm-btns">
+      <button class="cbtn cbtn-cancel" onclick="document.getElementById('modal-confirm').classList.remove('show')">Cancelar</button>
+      <button class="cbtn cbtn-confirm" onclick="doClear()">Sí, limpiar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const orders=[];
+const historial=[];
+const counts={retirado:0,transito:0,ruta:0,entregado:0,pendiente:0,incidencia:0};
+const BL={ruta:'En Ruta',transito:'En Tránsito',entregado:'Entregado',pendiente:'Pendiente',incidencia:'Incidencia',retirado:'Retirado'};
+const BC={ruta:'badge-ruta',transito:'badge-transito',entregado:'badge-entregado',pendiente:'badge-pendiente',incidencia:'badge-incidencia',retirado:'badge-retirado'};
+const BH={ruta:'#00d4aa',transito:'#60a5fa',entregado:'#10b981',pendiente:'#f59e0b',incidencia:'#ef4444',retirado:'#a78bfa'};
+const SI={ruta:'🔄',transito:'🚚',entregado:'✅',pendiente:'⏳',incidencia:'⚠️',retirado:'📦'};
+let filtroActual='all';
+let _modalLink='',_modalPedido=null;
+
+// VIEWS
+function setView(v,el){
+  ['dashboard','pedidos','kpi','qr','excel','historial'].forEach(x=>document.getElementById('view-'+x).style.display='none');
+  document.getElementById('view-'+v).style.display='block';
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(v==='historial')renderHistDesktop();
+  if(v==='qr')populateQRSelectDesktop();
+  if(v==='pedidos'){filtroActual='all';document.getElementById('filtro-header').innerHTML='';renderTabla('tabla-pedidos-wrap2');}
+  if(v==='kpi')renderKPIDist();
+}
+function filtrarNav(f,el){
+  filtroActual=f;
+  ['dashboard','pedidos','kpi','qr','excel','historial'].forEach(x=>document.getElementById('view-'+x).style.display='none');
+  document.getElementById('view-pedidos').style.display='block';
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el)el.classList.add('active');
+  const colores={ruta:'var(--accent)',transito:'var(--blue)',entregado:'var(--success)',pendiente:'var(--warn)',incidencia:'var(--danger)',retirado:'var(--purple)'};
+  const iconos={ruta:'🔄',transito:'🚚',entregado:'✅',pendiente:'⏳',incidencia:'⚠️',retirado:'📦'};
+  document.getElementById('filtro-header').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:14px 18px;background:var(--card);border:1px solid var(--bdr);border-radius:12px;border-left:3px solid ${colores[f]}">
+      <span style="font-size:28px">${iconos[f]}</span>
+      <div>
+        <div style="font-size:16px;font-weight:800;color:${colores[f]}">${BL[f]}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${counts[f]} pedido${counts[f]!==1?'s':''} · ${new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})}</div>
+      </div>
+      <button onclick="setView('pedidos',null);document.querySelectorAll('.nav-item')[1].classList.add('active')" style="margin-left:auto;padding:6px 14px;border-radius:7px;background:rgba(255,255,255,.06);border:1px solid var(--bdr);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">✕ Ver todos</button>
+    </div>`;
+  renderTabla('tabla-pedidos-wrap2');
+}
+
+// TABLA
+function renderTabla(containerId){
+  const filtered=filtroActual==='all'?orders:orders.filter(o=>o.status===filtroActual);
+  const search=document.getElementById('search-inp-'+containerId);
+  const q=search?search.value.toLowerCase():'';
+  const shown=q?filtered.filter(o=>o.client.toLowerCase().includes(q)||o.doc.toLowerCase().includes(q)||o.remitente.toLowerCase().includes(q)||o.city.toLowerCase().includes(q)):filtered;
+  const wrap=document.getElementById(containerId);
+  if(!wrap)return;
+  wrap.innerHTML=`
+    <div class="table-wrap">
+      <div class="table-header">
+        <span class="table-title">Pedidos ${filtroActual==='all'?'(todos)':'— '+BL[filtroActual]}</span>
+        <input class="search-inp" id="search-inp-${containerId}" placeholder="Buscar cliente, doc, ciudad..." value="${q}" oninput="renderTabla('${containerId}')"/>
+        <span class="table-count">${shown.length} pedido${shown.length!==1?'s':''}</span>
+      </div>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>Doc</th><th>Cliente</th><th>Remitente</th><th>Ciudad</th>
+          <th>Conductor</th><th>ETA</th><th>Estado</th><th style="text-align:right">Acciones</th>
+        </tr></thead>
+        <tbody>
+          ${shown.map(o=>`
+          <tr>
+            <td><div class="td-id">${o.doc}</div></td>
+            <td><div class="td-client">${o.client}</div>${o.alert?'<div class="alert-row-table">⚠️ Alerta</div>':''}</td>
+            <td><div class="td-remitente">${o.remitente||'—'}</div></td>
+            <td style="font-size:12px">${o.city}${o.region?', '+o.region:''}</td>
+            <td><div style="font-size:12px">${o.driver}</div><div style="font-size:10px;color:var(--muted);font-family:var(--mono)">${o.plate}</div></td>
+            <td><div class="td-eta">${o.eta}</div></td>
+            <td><span class="badge ${BC[o.status]}">${BL[o.status]}</span></td>
+            <td>
+              <div class="td-actions">
+                ${o.status!=='entregado'?`<button class="act-btn act-entregado" onclick="marcarEntregado('${o.id}')">✅</button>`:''}
+                <button class="act-btn act-qr" onclick="abrirModalQR('${o.id}')">QR</button>
+                <button class="act-btn" style="background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.3)" onclick="linkCliente('${o.id}')">🔗</button>
+                ${o.telefono?`<button class="act-btn act-wa" onclick="waRapido('${o.id}')">WA</button>`:''}
+                <button class="act-btn act-edit" onclick="editarEstado('${o.id}')">Estado ▾</button>
+              </div>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      </div>
+    </div>`;
+}
+
+function editarEstado(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  const nuevo=prompt('Estado actual: '+BL[o.status]+'\n\nEscribe el nuevo estado:\nretirado / transito / ruta / entregado / pendiente / incidencia',o.status);
+  if(!nuevo||!BL[nuevo]){if(nuevo!==null)showToast('⚠️ Estado inválido');return;}
+  if(counts[o.status]!==undefined&&counts[o.status]>0)counts[o.status]--;
+  o.status=nuevo;o.alert=nuevo==='incidencia'||nuevo==='pendiente';
+  if(nuevo==='entregado')o.eta='Entregado';
+  counts[nuevo]=(counts[nuevo]||0)+1;
+  refreshAll();
+  registrarHistorial('🔄 Estado cambiado', o.client+' · '+BL[nuevo], BH[nuevo]||'var(--accent)');
+  showToast('Estado actualizado a '+BL[nuevo]);
+}
+
+function marcarEntregado(id){
+  const o=orders.find(x=>x.id===id);if(!o||o.status==='entregado')return;
+  if(counts[o.status]!==undefined&&counts[o.status]>0)counts[o.status]--;
+  o.status='entregado';o.alert=false;o.eta='Entregado';
+  counts.entregado++;
+  registrarHistorial('✅ Entregado', o.client+' · '+o.doc, '#10b981');
+  refreshAll();showToast('✅ '+o.client+' entregado');
+}
+
+// SIDEBAR BADGES
+function updateSidebar(){
+  Object.keys(counts).forEach(k=>{
+    const el=document.getElementById('nb-'+k);if(el)el.textContent=counts[k];
+  });
+  const alerta=orders.filter(o=>o.alert).length;
+  const nb=document.getElementById('nb-alerta');if(nb)nb.textContent=alerta;
+}
+
+// KPI
+function updateKPI(){
+  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  const rate=total>0?Math.round(counts.entregado/total*100):0;
+  document.getElementById('otif-num').textContent=rate+'%';
+  document.getElementById('otif-sub').textContent=counts.entregado+' de '+total+' correctas · Meta: 95%';
+  document.getElementById('otif-time').textContent=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  ['entregado','ruta','pendiente','incidencia','transito','retirado'].forEach(k=>{
+    const el=document.getElementById('k-'+k);if(el)el.textContent=counts[k];
+    const bar=document.getElementById('kbar-'+k);
+    if(bar)bar.style.width=total>0?Math.round(counts[k]/total*100)+'%':'0%';
+  });
+  const kb=document.getElementById('kpi-otif-big');if(kb)kb.textContent=rate+'%';
+}
+
+function renderKPIDist(){
+  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  const items=[
+    {k:'entregado',label:'Entregado',color:'#10b981'},
+    {k:'ruta',label:'En Ruta',color:'#00d4aa'},
+    {k:'transito',label:'En Tránsito',color:'#60a5fa'},
+    {k:'pendiente',label:'Pendiente',color:'#f59e0b'},
+    {k:'incidencia',label:'Incidencia',color:'#ef4444'},
+    {k:'retirado',label:'Retirado',color:'#a78bfa'},
+  ];
+  document.getElementById('kpi-dist').innerHTML=items.map(it=>{
+    const pct=total>0?Math.round(counts[it.k]/total*100):0;
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="color:${it.color};font-weight:600">${it.label}</span>
+        <span style="color:var(--muted);font-family:var(--mono)">${counts[it.k]} (${pct}%)</span>
+      </div>
+      <div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden">
+        <div style="height:100%;background:${it.color};border-radius:3px;width:${pct}%;transition:width .6s"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// HISTORIAL
+function renderHistDesktop(){
+  document.getElementById('hist-desktop').innerHTML=historial.map((h,i)=>`
+    <div style="display:flex;gap:12px;margin-bottom:14px">
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div style="width:10px;height:10px;border-radius:50%;background:${h.color};flex-shrink:0"></div>
+        ${i<historial.length-1?`<div style="width:1px;flex:1;background:var(--bdr);min-height:20px"></div>`:''}
+      </div>
+      <div style="flex:1;padding-bottom:${i<historial.length-1?'14px':'0'}">
+        <div style="display:flex;justify-content:space-between">
+          <span style="font-size:13px;font-weight:600;color:${h.color}">${h.event}</span>
+          <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">${h.time}</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${h.detail}</div>
+      </div>
+    </div>`).join('');
+}
+function renderHistLateral(){
+  document.getElementById('hist-lateral').innerHTML=historial.slice(0,5).map(h=>`
+    <div class="hist-item">
+      <div class="hist-dot-sm" style="background:${h.color}"></div>
+      <div style="flex:1"><div class="hist-text" style="color:${h.color}">${h.event}</div><div class="hist-detail-sm">${h.detail}</div></div>
+      <span class="hist-time-sm">${h.time}</span>
+    </div>`).join('');
+}
+
+// FORMULARIO
+function enterGuardar(e){if(e.key==='Enter')agregarPedido();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')resetForm();});
+
+function agregarPedido(){
+  const r=document.getElementById('f-remitente').value.trim();
+  const c=document.getElementById('f-cliente').value.trim();
+  if(!c){showToast('⚠️ Ingresa el nombre del cliente');document.getElementById('f-cliente').focus();return;}
+  const tipo=document.getElementById('f-tipo').value;
+  const ndoc=document.getElementById('f-ndoc').value.trim();
+  const city=document.getElementById('f-ciudad').value.trim()||'Santiago';
+  const region=document.getElementById('f-region').value;
+  const o={
+    id:tipo+'-'+( ndoc||Math.floor(Math.random()*9000+1000)),
+    remitente:r||'Sin remitente',client:c,
+    telefono:document.getElementById('f-tel').value.trim(),
+    addr:document.getElementById('f-dir').value.trim()||'Sin dirección',
+    city:city,region:region,
+    doc:tipo+'-'+(ndoc||'—'),
+    driver:document.getElementById('f-conductor').value.trim()||'Por asignar',
+    plate:document.getElementById('f-patente').value.trim().toUpperCase()||'—',
+    eta:document.getElementById('f-eta').value,
+    status:document.getElementById('f-status').value,
+    alert:false
+  };
+  orders.unshift(o);
+  const s=o.status;counts[s]=(counts[s]||0)+1;
+  registrarHistorial('📦 Nuevo pedido', o.client+' · '+o.doc, '#00d4aa');
+  refreshAll();resetForm();
+  showToast('✅ Pedido '+o.doc+' agregado');
+}
+
+function resetForm(){
+  ['f-remitente','f-cliente','f-tel','f-dir','f-ciudad','f-ndoc','f-conductor','f-patente'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('f-status').value='ruta';
+  document.getElementById('f-eta').value='13:30';
+  document.getElementById('f-remitente').focus();
+}
+
+// WA
+function getMapsLink(o){
+  const query=encodeURIComponent((o.addr||'')+', '+(o.city||'')+', Chile');
+  return 'https://maps.google.com/?q='+query;
+}
+function buildWAMsg(o){
+  const mapsLink=getMapsLink(o);
+  const hora=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  const eta=o.eta&&o.eta!=='—'?o.eta:'Por confirmar';
+  return '*Prime Logistic Spa*\n'+
+    'Doc: '+o.doc+'\n\n'+
+    'Cliente: '+o.client+'\n'+
+    'Estado: '+(SI[o.status]||'•')+' '+BL[o.status]+' | ETA: '+eta+'\n'+
+    '📍 '+o.addr+', '+o.city+'\n'+
+    '🗺️ '+mapsLink+'\n'+
+    'Conductor: '+o.driver+' · '+o.plate+'\n\n'+
+    '_'+hora+'_';
+}
+function populateWASelects(){
+  ['wa-select','wa-rem-select'].forEach(id=>{
+    const sel=document.getElementById(id);if(!sel)return;
+    const cur=sel.value;
+    if(id==='wa-select'){
+      sel.innerHTML='<option value="">— Pedido individual —</option>';
+      orders.forEach(o=>{const opt=document.createElement('option');opt.value=o.id;opt.textContent=o.doc+' · '+o.client;sel.appendChild(opt);});
+    } else {
+      sel.innerHTML='<option value="">— Por remitente —</option>';
+      [...new Set(orders.map(o=>o.remitente).filter(Boolean))].forEach(r=>{
+        const c=orders.filter(o=>o.remitente===r).length;
+        const opt=document.createElement('option');opt.value=r;opt.textContent=r+' ('+c+')';sel.appendChild(opt);
+      });
+    }
+    if(cur)sel.value=cur;
+  });
+}
+function previewWA(){
+  const id=document.getElementById('wa-select').value;
+  const prev=document.getElementById('wa-prev');
+  if(!id){prev.style.display='none';return;}
+  const o=orders.find(x=>x.id===id);
+  if(!o){prev.style.display='none';return;}
+  prev.style.display='block';prev.textContent=buildWAMsg(o);
+}
+function previewWARem(){
+  const r=document.getElementById('wa-rem-select').value;
+  const prev=document.getElementById('wa-rem-prev');
+  if(!r){prev.style.display='none';return;}
+  prev.style.display='block';prev.textContent=buildMsgRemitente(r);
+}
+function enviarWAIndividual(){
+  const id=document.getElementById('wa-select').value;
+  if(!id){showToast('⚠️ Selecciona un pedido');return;}
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  const tel=o.telefono?o.telefono.replace(/[^0-9+]/g,''):'';
+  const msg=encodeURIComponent(buildWAMsg(o));
+  window.open(tel?'https://wa.me/'+tel+'?text='+msg:'https://wa.me/?text='+msg,'_blank');
+}
+function waRapido(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  const tel=o.telefono?o.telefono.replace(/[^0-9+]/g,''):'';
+  const msg=encodeURIComponent(buildWAMsg(o));
+  window.open(tel?'https://wa.me/'+tel+'?text='+msg:'https://wa.me/?text='+msg,'_blank');
+}
+function buildMsgRemitente(remitente){
+  const pedidos=orders.filter(o=>o.remitente===remitente);
+  const entregados=pedidos.filter(o=>o.status==='entregado').length;
+  const enRuta=pedidos.filter(o=>o.status==='ruta').length;
+  const transito=pedidos.filter(o=>o.status==='transito').length;
+  const pendientes=pedidos.filter(o=>o.status==='pendiente').length;
+  const incidencias=pedidos.filter(o=>o.status==='incidencia').length;
+  const retirados=pedidos.filter(o=>o.status==='retirado').length;
+  const fecha=new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'-');
+  const movimientos=pedidos.slice(0,8).map(o=>{
+    const icon={ruta:'🚚',transito:'⏳',entregado:'✅',pendiente:'⚠️',incidencia:'❌',retirado:'📦'}[o.status]||'•';
+    return o.doc+' | '+icon+' '+BL[o.status]+' | '+o.city;
+  }).join('\n');
+  let resumen='';
+  if(entregados>0) resumen+='✅ Entregados: '+entregados+'  ';
+  if(enRuta>0) resumen+='🚚 En Ruta: '+enRuta+'  ';
+  if(transito>0) resumen+='⏳ En Tránsito: '+transito+'  ';
+  if(pendientes>0) resumen+='⚠️ Pendientes: '+pendientes+'  ';
+  if(incidencias>0) resumen+='❌ Incidencias: '+incidencias+'  ';
+  if(retirados>0) resumen+='📦 Retirados: '+retirados;
+  return '📦 *Prime Logistic Spa*\n'+
+    '📋 Resumen Diario - '+remitente+'\n\n'+
+    'Total despachos: '+pedidos.length+'\n'+
+    resumen.trim()+'\n\n'+
+    'Últimos movimientos:\n'+
+    movimientos+'\n\n'+
+    'Fecha: '+fecha;
+}
+function enviarWARemitente(){
+  const r=document.getElementById('wa-rem-select').value;
+  if(!r){showToast('⚠️ Selecciona un remitente');return;}
+  window.open('https://wa.me/?text='+encodeURIComponent(buildMsgRemitente(r)),'_blank');
+}
+function sendWA(){
+  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  const rate=total>0?Math.round(counts.entregado/total*100):0;
+  const msg='📦 *Informe Prime Logistic Spa*\n'+new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})+'\n\n✅ Entregados: '+counts.entregado+'\n🔄 En ruta: '+counts.ruta+'\n🚚 Tránsito: '+counts.transito+'\n⚠️ Pendientes: '+counts.pendiente+'\n❌ Incidencias: '+counts.incidencia+'\n📊 OTIF: '+rate+'%\n\n🕐 '+new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+
+// QR
+function getSelfURL(){return window.location.href.split('?')[0];}
+function getLinkPedido(o){return getSelfURL()+'?pedido='+btoa(unescape(encodeURIComponent(JSON.stringify(o))));}
+function abrirModalQR(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  _modalLink=getLinkPedido(o);_modalPedido=o;
+  document.getElementById('modal-title').textContent=o.client;
+  document.getElementById('modal-sub').textContent=o.doc+' · '+o.addr+', '+o.city;
+  document.getElementById('modal-doc').textContent=o.doc;
+  const box=document.getElementById('modal-qr-box');box.innerHTML='';
+  new QRCode(box,{text:_modalLink,width:160,height:160,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+  document.getElementById('modal-qr').classList.add('show');
+}
+function cerrarModal(){document.getElementById('modal-qr').classList.remove('show');}
+function copiarModalLink(){copiar(_modalLink,'✅ Link copiado');}
+function waModal(){
+  if(!_modalPedido)return;
+  const o=_modalPedido;
+  window.open('https://wa.me/?text='+encodeURIComponent('📦 *Prime Logistic — QR de entrega*\n\n👤 '+o.client+'\n📍 '+o.addr+', '+o.city+'\n📄 '+o.doc+'\n\n🔗 '+_modalLink),'_blank');
+}
+function populateQRSelectDesktop(){
+  const sel=document.getElementById('qr-select-desktop');if(!sel)return;
+  sel.innerHTML='<option value="">— Selecciona un pedido —</option>';
+  orders.forEach(o=>{const opt=document.createElement('option');opt.value=o.id;opt.textContent=o.doc+' · '+o.client+' ('+o.city+')';sel.appendChild(opt);});
+}
+function generarQRDesktop(){
+  const id=document.getElementById('qr-select-desktop').value;
+  const res=document.getElementById('qr-desktop-result');
+  if(!id){res.style.display='none';return;}
+  const o=orders.find(x=>x.id===id);if(!o){res.style.display='none';return;}
+  _modalLink=getLinkPedido(o);_modalPedido=o;
+  const box=document.getElementById('qr-desktop-box');box.innerHTML='';
+  new QRCode(box,{text:_modalLink,width:180,height:180,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+  document.getElementById('qr-desktop-label').textContent=o.doc+' · '+o.client;
+  res.style.display='block';
+}
+function copiarLinkQRDesktop(){copiar(_modalLink,'✅ Link copiado');}
+function waQRDesktop(){if(_modalPedido)waModal();}
+
+// CLEAR
+function confirmClear(){document.getElementById('modal-confirm').classList.add('show');}
+function doClear(){
+  orders.length=0;Object.keys(counts).forEach(k=>counts[k]=0);
+  document.getElementById('modal-confirm').classList.remove('show');
+  refreshAll();showToast('Datos limpiados');
+}
+
+// UTIL
+function copiar(txt,msg){
+  if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>showToast(msg));}
+  else{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast(msg);}
+}
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+function updateTime(){
+  const t=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('top-time').textContent=t;
+}
+
+function refreshAll(){
+  updateKPI();updateSidebar();populateWASelects();
+  renderTabla('tabla-pedidos-wrap');
+  renderTabla('tabla-pedidos-wrap2');
+  renderHistLateral();
+}
+
+// EXCEL
+let _excelPedidos=[];
+
+function excelDragOver(e){e.preventDefault();document.getElementById('excel-dropzone').style.borderColor='var(--accent)';document.getElementById('excel-dropzone').style.background='rgba(0,212,170,.06)';}
+function excelDragLeave(e){document.getElementById('excel-dropzone').style.borderColor='var(--bdr2)';document.getElementById('excel-dropzone').style.background='';}
+function excelDrop(e){e.preventDefault();excelDragLeave(e);const f=e.dataTransfer.files[0];if(f)leerExcel(f);}
+function importarExcel(input){const f=input.files[0];if(f)leerExcel(f);input.value='';}
+
+function leerExcel(file){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(rows.length>0){
+        const colsDetectadas=Object.keys(rows[0]);
+        console.log('Columnas detectadas en Excel:',colsDetectadas);
+      }
+      // Normalizar claves eliminando espacios extra
+      const rowsNorm=rows.map(r=>{
+        const n={};
+        Object.keys(r).forEach(k=>{ n[k.trim()]=typeof r[k]==='string'?r[k].trim():r[k]; });
+        return n;
+      });
+      _excelPedidos=rowsNorm.map((r,i)=>{
+        const doc=(r['Documento']||r['documento']||r['doc']||r['DOC']||'').toString().trim();
+        const status=normStatus((r['Estado']||r['estado']||r['ESTADO']||'ruta').toString().trim());
+        const cliente=(
+          r['Cliente']||r['cliente']||r['CLIENTE']||
+          r['client']||r['Client']||r['CLIENT']||
+          r['nombre cliente']||r['Nombre Cliente']||r['NOMBRE CLIENTE']||
+          r['nombre_cliente']||r['NombreCliente']||
+          r['razon social']||r['Razon Social']||r['RAZON SOCIAL']||
+          r['razón social']||r['Razón Social']||
+          r['nombre']||r['Nombre']||r['NOMBRE']||
+          ''
+        ).toString().trim();
+        const ciudad=(r['Ciudad']||r['ciudad']||r['CIUDAD']||'').toString().trim();
+        const region=(r['Region']||r['región']||r['Región']||r['region']||r['REGION']||'').toString().trim();
+        // Evitar duplicar ciudad en región
+        const regionFinal = region && region.toLowerCase()!==ciudad.toLowerCase() ? region : '';
+        return {
+          id:doc||'IMP-'+(i+1),
+          remitente:(r['Remitente']||r['remitente']||r['REMITENTE']||'').toString().trim(),
+          client:cliente||'Sin nombre',
+          telefono:(r['Telefono']||r['telefono']||r['Teléfono']||r['teléfono']||r['TELEFONO']||'').toString().trim(),
+          addr:(r['Direccion']||r['dirección']||r['Dirección']||r['direccion']||r['DIRECCION']||'').toString().trim(),
+          city:ciudad,
+          region:regionFinal,
+          doc:doc,
+          driver:(r['Conductor']||r['conductor']||r['CONDUCTOR']||'Por asignar').toString().trim(),
+          plate:(r['Patente']||r['patente']||r['PATENTE']||'—').toString().trim().toUpperCase(),
+          eta:(r['ETA']||r['eta']||'—').toString().trim(),
+          status:status,
+          alert:status==='incidencia'||status==='pendiente'
+        };
+      }).filter(o=>o.client&&o.client!=='Sin nombre'||o.doc);
+      mostrarPreviewExcel(_excelPedidos);
+    }catch(err){mostrarResultado('excel-result','❌ Error al leer el archivo: '+err.message,'danger');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function normStatus(s){
+  const m={'retirado':'retirado','transito':'transito','tránsito':'transito','en tránsito':'transito','en transito':'transito','ruta':'ruta','en ruta':'ruta','entregado':'entregado','pendiente':'pendiente','incidencia':'incidencia'};
+  return m[s.toLowerCase()]||'ruta';
+}
+
+function mostrarPreviewExcel(pedidos){
+  if(!pedidos.length){mostrarResultado('excel-result','⚠️ No se encontraron pedidos válidos','warn');return;}
+  document.getElementById('excel-count').textContent=pedidos.length;
+  const cols=['doc','client','remitente','city','driver','eta','status'];
+  const heads=['Doc','Cliente','Remitente','Ciudad','Conductor','ETA','Estado'];
+  const html=`<table style="width:100%;border-collapse:collapse;font-size:11px">
+    <thead><tr>${heads.map(h=>`<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--bdr);background:rgba(255,255,255,.02);white-space:nowrap">${h}</th>`).join('')}</tr></thead>
+    <tbody>${pedidos.map(o=>`<tr>${cols.map(c=>{
+      if(c==='status')return`<td style="padding:7px 10px;border-bottom:1px solid var(--bdr)"><span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:${BH[o.status]||'#666'}22;color:${BH[o.status]||'#aaa'}">${BL[o.status]||o.status}</span></td>`;
+      return`<td style="padding:7px 10px;border-bottom:1px solid var(--bdr);color:var(--text)">${o[c]||'—'}</td>`;
+    }).join('')}</tr>`).join('')}</tbody>
+  </table>`;
+  document.getElementById('excel-preview-table').innerHTML=html;
+  document.getElementById('excel-preview').style.display='block';
+  document.getElementById('excel-result').style.display='none';
+}
+
+function confirmarImport(){
+  let nuevos=0,duplicados=0;
+  _excelPedidos.forEach(o=>{
+    if(orders.find(x=>x.id===o.id)){duplicados++;return;}
+    orders.unshift(o);
+    counts[o.status]=(counts[o.status]||0)+1;
+    nuevos++;
+  });
+  _excelPedidos=[];
+  document.getElementById('excel-preview').style.display='none';
+  refreshAll();
+  mostrarResultado('excel-result',`✅ ${nuevos} pedido${nuevos!==1?'s':''} importado${nuevos!==1?'s':''}${duplicados>0?' · '+duplicados+' duplicado'+(duplicados!==1?'s':'')+' omitido'+(duplicados!==1?'s':''):''}. ¡Listo!`,'success');
+  showToast('✅ '+nuevos+' pedidos importados');
+  registrarHistorial('📊 Importación Excel', nuevos+' pedidos importados'+(duplicados>0?' · '+duplicados+' duplicados':''), '#60a5fa');
+}
+
+function cancelarImport(){
+  _excelPedidos=[];
+  document.getElementById('excel-preview').style.display='none';
+}
+
+function mostrarResultado(id,msg,type){
+  const colors={success:'rgba(16,185,129,.08)|rgba(16,185,129,.3)|#10b981',warn:'rgba(245,158,11,.08)|rgba(245,158,11,.3)|#f59e0b',danger:'rgba(239,68,68,.08)|rgba(239,68,68,.3)|#ef4444'};
+  const [bg,bdr,clr]=(colors[type]||colors.success).split('|');
+  const el=document.getElementById(id);
+  el.style.cssText=`display:block;padding:10px 12px;border-radius:8px;font-size:12px;background:${bg};border:1px solid ${bdr};color:${clr};line-height:1.5`;
+  el.textContent=msg;
+  setTimeout(()=>{el.style.display='none';},5000);
+}
+
+function descargarPlantilla(){
+  const ws=XLSX.utils.aoa_to_sheet([
+    ['Remitente','Cliente','Telefono','Direccion','Ciudad','Region','Documento','Conductor','Patente','ETA','Estado'],
+    ['Bodega Central','Comercial Fuentes Ltda.','+56912340001','Av. Grecia 2800','Ñuñoa','RM','GD-0001','Carlos Vera','RVTK-32','13:30','ruta'],
+    ['Bodega Central','Ferretería Del Sur','+56912340002','San Martín 450','Temuco','Araucanía','GD-0002','Mario Soto','BNJK-91','10:30','transito'],
+  ]);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Pedidos');
+  XLSX.writeFile(wb,'plantilla-prime-logistic.xlsx');
+  showToast('✅ Plantilla descargada');
+}
+
+function exportarPedidos(){
+  if(!orders.length){showToast('⚠️ No hay pedidos para exportar');return;}
+  const rows=orders.map(o=>({
+    Documento:o.doc,
+    Remitente:o.remitente,
+    Cliente:o.client,
+    Telefono:o.telefono||'',
+    Direccion:o.addr,
+    Ciudad:o.city,
+    Region:o.region||'',
+    Conductor:o.driver,
+    Patente:o.plate,
+    ETA:o.eta,
+    Estado:o.status,
+    Alerta:o.alert?'Sí':'No'
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Pedidos');
+  const fecha=new Date().toLocaleDateString('es-CL').replace(/\//g,'-');
+  XLSX.writeFile(wb,'pedidos-prime-logistic-'+fecha+'.xlsx');
+  showToast('✅ Exportado correctamente');
+}
+
+function linkCliente(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  const encoded=btoa(unescape(encodeURIComponent(JSON.stringify([o]))));
+  const base=window.location.href.split('tracking-escritorio.html')[0];
+  const link=base+'tracking-cliente.html?data='+encoded;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(link).then(()=>{
+      showToast('✅ Link de '+o.client+' copiado');
+    });
+  }
+  // Enviar por WA si tiene teléfono
+  if(o.telefono){
+    const tel=o.telefono.replace(/[^0-9+]/g,'');
+    const msg=encodeURIComponent('📦 *Prime Logistic Spa*\n\nHola '+o.client+', puedes ver el estado de tu pedido aquí:\n'+link);
+    setTimeout(()=>window.open('https://wa.me/'+tel+'?text='+msg,'_blank'),500);
+  }
+}
+
+function compartirLinkCliente(){
+  if(!orders.length){showToast('⚠️ No hay pedidos para compartir');return;}
+  const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(orders))));
+  const base=window.location.href.split('tracking-escritorio.html')[0];
+  const link=base+'tracking-cliente.html?data='+encoded;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(link).then(()=>{
+      showToast('✅ Link del cliente copiado');
+      // También ofrecer compartir por WA
+      if(confirm('¿Enviar el link de seguimiento por WhatsApp?')){
+        const msg=encodeURIComponent('📦 *Prime Logistic Spa*\n\nHaz clic para ver el estado de tu pedido:\n'+link);
+        window.open('https://wa.me/?text='+msg,'_blank');
+      }
+    });
+  }
+}
+
+// HISTORIAL 3 DÍAS
+const TRES_DIAS_MS = 3 * 24 * 60 * 60 * 1000;
+
+function registrarHistorial(evento, detalle, color){
+  const ahora = new Date();
+  historial.unshift({
+    event: evento,
+    detail: detalle,
+    time: ahora.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),
+    fecha: ahora.toLocaleDateString('es-CL',{day:'numeric',month:'short'}),
+    timestamp: ahora.getTime(),
+    color: color || 'var(--accent)'
+  });
+  // Limpiar eventos con más de 3 días
+  const limite = Date.now() - TRES_DIAS_MS;
+  while(historial.length > 0 && historial[historial.length-1].timestamp < limite){
+    historial.pop();
+  }
+  renderHistLateral();
+}
+
+function renderHistLateral(){
+  const el = document.getElementById('hist-lateral');
+  if(!el) return;
+  if(!historial.length){
+    el.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:10px">Sin eventos recientes</div>';
+    return;
+  }
+  el.innerHTML=historial.slice(0,8).map(h=>`
+    <div class="hist-item">
+      <div class="hist-dot-sm" style="background:${h.color}"></div>
+      <div style="flex:1"><div class="hist-text" style="color:${h.color}">${h.event}</div><div class="hist-detail-sm">${h.detail}</div></div>
+      <div style="text-align:right"><span class="hist-time-sm">${h.time}</span><div style="font-size:9px;color:var(--muted2)">${h.fecha||''}</div></div>
+    </div>`).join('');
+}
+
+function guardarTodo(){
+  if(!orders.length){showToast('⚠️ No hay pedidos para guardar');return;}
+  const rows=orders.map(o=>({
+    Documento:o.doc,
+    Remitente:o.remitente,
+    Cliente:o.client,
+    Telefono:o.telefono||'',
+    Direccion:o.addr,
+    Ciudad:o.city,
+    Region:o.region||'',
+    Conductor:o.driver,
+    Patente:o.plate,
+    ETA:o.eta,
+    Estado:o.status,
+    Alerta:o.alert?'Sí':'No'
+  }));
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb,ws,'Pedidos');
+  // Agregar hoja de historial 3 días
+  if(historial.length){
+    const hRows=historial.map(h=>({
+      Fecha:h.fecha||'',
+      Hora:h.time,
+      Evento:h.event,
+      Detalle:h.detail
+    }));
+    const wsH=XLSX.utils.json_to_sheet(hRows);
+    XLSX.utils.book_append_sheet(wb,wsH,'Historial 3 días');
+  }
+  const fecha=new Date().toLocaleDateString('es-CL').replace(/\//g,'-');
+  const hora=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}).replace(':','-');
+  XLSX.writeFile(wb,'prime-logistic-'+fecha+'-'+hora+'.xlsx');
+  registrarHistorial('💾 Guardado','Excel exportado correctamente','#00d4aa');
+  showToast('✅ Guardado correctamente');
+}
+
+// Alerta al cerrar si hay pedidos sin guardar
+let _ultimoGuardado = 0;
+const _guardarOriginal = guardarTodo;
+window.addEventListener('beforeunload', function(e){
+  if(orders.length > 0){
+    e.preventDefault();
+    e.returnValue = '¿Guardaste los pedidos antes de salir? Usa el botón 💾 Guardar.';
+    return e.returnValue;
+  }
+});
+
+// Guardar automático cada 5 minutos si hay pedidos
+setInterval(()=>{
+  if(orders.length > 0){
+    const ahora = Date.now();
+    if(ahora - _ultimoGuardado > 300000){
+      _ultimoGuardado = ahora;
+      guardarTodo();
+      showToast('💾 Guardado automático');
+    }
+  }
+}, 300000);
+
+// Informe automático a las 18:00
+let _informeEnviado = false;
+setInterval(()=>{
+  const ahora = new Date();
+  const hora = ahora.getHours();
+  const minuto = ahora.getMinutes();
+  // A las 18:00 exacto
+  if(hora === 18 && minuto === 0 && !_informeEnviado){
+    _informeEnviado = true;
+    if(orders.length > 0){
+      // Guardar Excel automáticamente
+      guardarTodo();
+      // Mostrar notificación
+      mostrarNotificacion18();
+    }
+  }
+  // Resetear a las 18:01 para el día siguiente
+  if(hora === 18 && minuto === 1) _informeEnviado = false;
+}, 30000);
+
+function mostrarNotificacion18(){
+  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  const rate=total>0?Math.round(counts.entregado/total*100):0;
+  // Crear notificación visual
+  const notif=document.createElement('div');
+  notif.style.cssText='position:fixed;top:70px;right:20px;background:#111827;border:1px solid var(--accent);border-radius:14px;padding:16px 20px;z-index:999;max-width:300px;box-shadow:0 8px 32px rgba(0,0,0,.4)';
+  notif.innerHTML=`
+    <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px">🕕 Informe del día — 18:00</div>
+    <div style="font-size:12px;color:var(--text);line-height:1.8">
+      ✅ Entregados: ${counts.entregado}<br>
+      🔄 En ruta: ${counts.ruta}<br>
+      ⚠️ Pendientes: ${counts.pendiente}<br>
+      ❌ Incidencias: ${counts.incidencia}<br>
+      📊 OTIF: ${rate}%
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button onclick="sendWA();this.parentElement.parentElement.remove()" style="flex:1;padding:8px;background:#25d366;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">📲 Enviar WA</button>
+      <button onclick="this.parentElement.parentElement.remove()" style="padding:8px 12px;background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--bdr);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">✕</button>
+    </div>`;
+  document.body.appendChild(notif);
+  // Auto cerrar en 60 segundos
+  setTimeout(()=>{ if(notif.parentElement) notif.remove(); }, 60000);
+}
+
+// INIT
+renderTabla('tabla-pedidos-wrap');
+renderTabla('tabla-pedidos-wrap2');
+updateKPI();updateSidebar();
+populateWASelects();
+renderHistLateral();
+updateTime();setInterval(updateTime,10000);
+document.getElementById('f-remitente').focus();
+</script>
+</body>
+</html>
