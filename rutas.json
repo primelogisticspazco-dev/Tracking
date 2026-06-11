@@ -1,0 +1,11 @@
+[
+  {
+    "id":"PL-0001",
+    "cliente":"Henkel",
+    "zona":"Sur",
+    "destino":"Temuco",
+    "estado":"En ruta",
+    "eta":"15:40 hrs",
+    "camion":"Atego 10 Ton"
+  }
+]
