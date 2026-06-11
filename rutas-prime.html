@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Prime Logistic - Rutas</title>
+
+<style>
+body{
+font-family:Arial;
+background:#f4f6f8;
+padding:20px;
+}
+
+.card{
+background:white;
+padding:20px;
+border-radius:10px;
+max-width:500px;
+}
+
+input,select,button{
+width:100%;
+padding:10px;
+margin:8px 0;
+}
+
+button{
+background:#0b63ce;
+color:white;
+border:0;
+cursor:pointer;
+}
+
+.resultado{
+margin-top:20px;
+background:#eef5ff;
+padding:15px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>🚛 Prime Logistic</h1>
+
+<div class="card">
+
+<h3>Crear Ruta</h3>
+
+<input id="cliente" placeholder="Cliente">
+
+<select id="zona">
+<option>Sur</option>
+<option>Norte</option>
+<option>Lacustre</option>
+<option>Cordillera</option>
+</select>
+
+<input id="destino" placeholder="Dirección destino">
+
+<input id="eta" placeholder="ETA ejemplo 15:40">
+
+<button onclick="crearRuta()">
+CREAR VIAJE
+</button>
+
+
+<div class="resultado" id="resultado"></div>
+
+
+</div>
+
+
+<script>
+
+function crearRuta(){
+
+let id="PL-"+Math.floor(Math.random()*9999);
+
+let link=
+"tracking-cliente.html?id="+id;
+
+
+document.getElementById("resultado").innerHTML=
+
+`
+<h3>Viaje creado</h3>
+
+Código:
+<b>${id}</b>
+
+<br><br>
+
+Cliente:
+${cliente.value}
+
+<br>
+
+Zona:
+${zona.value}
+
+<br>
+
+Destino:
+${destino.value}
+
+<br>
+
+ETA:
+${eta.value}
+
+<br><br>
+
+Link cliente:
+
+<br>
+
+${link}
+
+`;
+
+}
+
+</script>
+
+
+</body>
+</html>
