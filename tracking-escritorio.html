@@ -278,18 +278,31 @@ select.f-inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
     <!-- MAPA -->
     <div id="view-mapa" style="display:none">
       <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;overflow:hidden">
-        <div style="padding:14px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:12px">
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:700;margin-bottom:6px">🗺️ Mapa de rutas</div>
-            <div style="font-size:11px;color:var(--muted)">Origen: La Farfana 400, Pudahuel</div>
+        <div style="padding:14px 16px;border-bottom:1px solid var(--bdr)">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;margin-bottom:6px">🗺️ Mapa de rutas</div>
+              <div style="font-size:11px;color:var(--muted)">Origen: La Farfana 400, Pudahuel</div>
+            </div>
           </div>
-          <select class="f-inp" id="mapa-pedido-sel" style="width:280px" onchange="trazarRuta()">
-            <option value="">— Selecciona un pedido —</option>
-          </select>
+          <div style="display:flex;gap:6px;margin-bottom:10px">
+            <button class="mapa-tab active" id="tab-individual" onclick="cambiarTabMapa('individual')" style="padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--accent);background:rgba(0,212,170,.08);color:var(--accent)">📍 Pedido individual</button>
+            <button class="mapa-tab" id="tab-conductor" onclick="cambiarTabMapa('conductor')" style="padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--bdr);background:rgba(255,255,255,.03);color:var(--muted)">🚚 Hoja de ruta por conductor</button>
+          </div>
+          <div id="mapa-controles-individual">
+            <select class="f-inp" id="mapa-pedido-sel" style="width:100%" onchange="trazarRuta()">
+              <option value="">— Selecciona un pedido —</option>
+            </select>
+          </div>
+          <div id="mapa-controles-conductor" style="display:none">
+            <select class="f-inp" id="mapa-conductor-sel" style="width:100%" onchange="trazarHojaRuta()">
+              <option value="">— Selecciona un conductor —</option>
+            </select>
+          </div>
         </div>
         <div style="display:flex;gap:0">
           <div id="mapa-ruta" style="height:500px;flex:1"></div>
-          <div id="mapa-info-panel" style="width:220px;background:var(--card2);border-left:1px solid var(--bdr);padding:14px;display:none;overflow-y:auto">
+          <div id="mapa-info-panel" style="width:240px;background:var(--card2);border-left:1px solid var(--bdr);padding:14px;display:none;overflow-y:auto;max-height:500px">
             <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px">Detalles</div>
             <div id="mapa-detalle"></div>
           </div>
@@ -1231,6 +1244,173 @@ function clasificarZona(ciudad){
   if(ZONA_SUR.some(z=>c.includes(z.normalize('NFD').replace(/[\u0300-\u036f]/g,''))))return 'sur';
   if(ZONA_CONCEPCION.some(z=>c.includes(z.normalize('NFD').replace(/[\u0300-\u036f]/g,''))))return 'concepcion';
   return 'directo'; // cualquier otra ciudad: ruta directa desde Pudahuel
+}
+
+function cambiarTabMapa(tab){
+  document.getElementById('tab-individual').style.cssText = tab==='individual'
+    ?'padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--accent);background:rgba(0,212,170,.08);color:var(--accent)'
+    :'padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--bdr);background:rgba(255,255,255,.03);color:var(--muted)';
+  document.getElementById('tab-conductor').style.cssText = tab==='conductor'
+    ?'padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--accent);background:rgba(0,212,170,.08);color:var(--accent)'
+    :'padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--bdr);background:rgba(255,255,255,.03);color:var(--muted)';
+  document.getElementById('mapa-controles-individual').style.display = tab==='individual'?'block':'none';
+  document.getElementById('mapa-controles-conductor').style.display = tab==='conductor'?'block':'none';
+  if(_rutaControl){ try{_mapa.removeControl(_rutaControl);}catch(e){} _rutaControl=null; }
+  document.getElementById('mapa-info-panel').style.display='none';
+  if(tab==='conductor') populateConductorSelect();
+}
+
+function populateConductorSelect(){
+  const sel=document.getElementById('mapa-conductor-sel');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Selecciona un conductor —</option>';
+  const conductores=[...new Set(orders.filter(o=>o.status!=='entregado'&&o.driver).map(o=>o.driver))];
+  conductores.forEach(d=>{
+    const cant=orders.filter(o=>o.driver===d&&o.status!=='entregado').length;
+    const opt=document.createElement('option');
+    opt.value=d;opt.textContent=d+' ('+cant+' entregas pendientes)';
+    sel.appendChild(opt);
+  });
+  if(cur)sel.value=cur;
+}
+
+// Geocodificar dirección (helper)
+function geocodificar(addr,city){
+  const query=encodeURIComponent(addr+', '+city+', Chile');
+  return fetch('https://nominatim.openstreetmap.org/search?format=json&q='+query+'&limit=1&countrycodes=cl')
+    .then(r=>r.json())
+    .then(data=>data&&data.length?{lat:parseFloat(data[0].lat),lon:parseFloat(data[0].lon)}:null);
+}
+
+// Optimización simple: nearest neighbor desde el punto de partida
+function optimizarOrden(origen, paradas){
+  const restantes=[...paradas];
+  const ordenadas=[];
+  let actual=origen;
+  while(restantes.length){
+    let idxMasCercano=0, distMin=Infinity;
+    restantes.forEach((p,i)=>{
+      const d=Math.pow(p.lat-actual.lat,2)+Math.pow(p.lon-actual.lon,2);
+      if(d<distMin){distMin=d;idxMasCercano=i;}
+    });
+    const elegido=restantes.splice(idxMasCercano,1)[0];
+    ordenadas.push(elegido);
+    actual={lat:elegido.lat,lon:elegido.lon};
+  }
+  return ordenadas;
+}
+
+async function trazarHojaRuta(){
+  const conductor=document.getElementById('mapa-conductor-sel').value;
+  if(!conductor){ document.getElementById('mapa-info-panel').style.display='none'; return; }
+  const pedidos=orders.filter(o=>o.driver===conductor&&o.status!=='entregado');
+  if(!pedidos.length){ showToast('⚠️ Sin pedidos pendientes para este conductor'); return; }
+
+  showToast('🔄 Calculando ruta óptima de '+pedidos.length+' paradas...');
+
+  // Geocodificar todas las direcciones
+  const geocoded=[];
+  for(const o of pedidos){
+    const coords=await geocodificar(o.addr,o.city);
+    if(coords) geocoded.push({...coords,pedido:o});
+  }
+  if(!geocoded.length){ showToast('⚠️ No se pudieron ubicar las direcciones'); return; }
+
+  // Determinar punto de partida según zona predominante
+  const ciudadesSur=geocoded.filter(g=>clasificarZona(g.pedido.city)==='sur').length;
+  const origenRuta = ciudadesSur>geocoded.length/2 ? {lat:BODEGA2_COORDS[0],lon:BODEGA2_COORDS[1]} : {lat:BODEGA_COORDS[0],lon:BODEGA_COORDS[1]};
+  const origenLabel = ciudadesSur>geocoded.length/2 ? 'Bodega Temuco' : 'Bodega Central Pudahuel';
+
+  // Optimizar orden con nearest neighbor
+  const ordenOptimo=optimizarOrden(origenRuta, geocoded);
+
+  // Limpiar mapa anterior
+  if(_rutaControl){ try{_mapa.removeControl(_rutaControl);}catch(e){} _rutaControl=null; }
+
+  // Construir waypoints: origen + paradas optimizadas
+  const waypoints=[L.latLng(origenRuta.lat,origenRuta.lon), ...ordenOptimo.map(p=>L.latLng(p.lat,p.lon))];
+
+  const iconoOrigen=L.divIcon({
+    html:`<div style="background:#0066ff;width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:16px">🏭</div>`,
+    iconSize:[34,34],iconAnchor:[17,17],className:''
+  });
+
+  _rutaControl=L.Routing.control({
+    waypoints:waypoints,
+    routeWhileDragging:false,
+    showAlternatives:false,
+    lineOptions:{styles:[{color:'#00d4aa',weight:4,opacity:.8}]},
+    createMarker:function(i,wp){
+      if(i===0) return L.marker(wp.latLng,{icon:iconoOrigen}).bindPopup('<b>'+origenLabel+'</b>');
+      const numeroIcon=L.divIcon({
+        html:`<div style="background:#00d4aa;width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#0a0f1e">${i}</div>`,
+        iconSize:[30,30],iconAnchor:[15,15],className:''
+      });
+      const pedido=ordenOptimo[i-1].pedido;
+      return L.marker(wp.latLng,{icon:numeroIcon}).bindPopup('<b>Parada '+i+': '+pedido.client+'</b><br>'+pedido.addr+', '+pedido.city);
+    },
+    containerClassName:'leaflet-routing-container-hidden'
+  }).addTo(_mapa);
+
+  _rutaControl.on('routesfound',function(e){
+    const ruta=e.routes[0];
+    const km=(ruta.summary.totalDistance/1000).toFixed(1);
+    const mins=Math.round(ruta.summary.totalTime/60);
+    const horas=Math.floor(mins/60), minRest=mins%60;
+    const tiempoStr=horas>0?horas+'h '+minRest+'min':mins+'min';
+
+    const listaParadas=ordenOptimo.map((p,i)=>{
+      const o=p.pedido;
+      return `<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr)">
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#0a0f1e;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:700;white-space:normal">${o.client}</div>
+          <div style="font-size:10px;color:var(--muted)">${o.city} · ${o.doc}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('mapa-detalle').innerHTML=`
+      <div style="margin-bottom:10px;padding:10px;background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:8px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Conductor</div>
+        <div style="font-size:13px;font-weight:700">${conductor}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${ordenOptimo.length} paradas optimizadas</div>
+      </div>
+      <div style="padding:10px;background:var(--card);border-radius:8px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:11px;color:var(--muted)">Distancia total</span>
+          <span style="font-size:12px;font-weight:700;color:var(--accent)">${km} km</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="font-size:11px;color:var(--muted)">Tiempo est.</span>
+          <span style="font-size:12px;font-weight:700;color:var(--warn)">${tiempoStr}</span>
+        </div>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Orden de visita</div>
+      ${listaParadas}
+      <button onclick="exportarHojaRuta('${conductor}')" style="width:100%;margin-top:12px;padding:9px;border-radius:8px;background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.3);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">📋 Exportar hoja de ruta</button>`;
+    document.getElementById('mapa-info-panel').style.display='block';
+    showToast('✅ Ruta optimizada: '+km+' km total');
+  });
+
+  const bounds=waypoints.map(w=>[w.lat,w.lng]);
+  _mapa.fitBounds(bounds,{padding:[30,30]});
+}
+
+function exportarHojaRuta(conductor){
+  const pedidos=orders.filter(o=>o.driver===conductor&&o.status!=='entregado');
+  if(!pedidos.length)return;
+  const rows=pedidos.map((o,i)=>({
+    Orden:i+1,Documento:o.doc,Cliente:o.client,Direccion:o.addr,
+    Ciudad:o.city,Telefono:o.telefono||'',ETA:o.eta,Estado:BL[o.status]
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Hoja de Ruta');
+  const fecha=new Date().toLocaleDateString('es-CL').replace(/\//g,'-');
+  XLSX.writeFile(wb,'hoja-ruta-'+conductor.replace(/\s/g,'-')+'-'+fecha+'.xlsx');
+  showToast('✅ Hoja de ruta exportada');
 }
 
 function populateMapaSelect(){
