@@ -579,6 +579,7 @@ function renderTabla(containerId){
                 <button class="act-btn" style="background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.3)" onclick="linkCliente('${o.id}')">🔗</button>
                 ${o.telefono?`<button class="act-btn act-wa" onclick="waRapido('${o.id}')">WA</button>`:''}
                 <button class="act-btn act-edit" onclick="asignarConductor('${o.id}')">🚚 Conductor</button>
+                <button class="act-btn act-edit" onclick="asignarPatente('${o.id}')">🔑</button>
                 <button class="act-btn act-edit" onclick="editarEstado('${o.id}')">Estado ▾</button>
               </div>
             </td>
@@ -605,16 +606,25 @@ function editarEstado(id){
 function asignarConductor(id){
   const o=orders.find(x=>x.id===id);if(!o)return;
   const conductoresExistentes=[...new Set(orders.map(x=>x.driver).filter(d=>d&&d!=='Por asignar'))];
-  const listaTexto=conductoresExistentes.length?'\n\nConductores existentes:\n'+conductoresExistentes.join(', '):'';
-  const nuevoConductor=prompt('Conductor actual: '+(o.driver||'Sin asignar')+listaTexto+'\n\nEscribe el nombre del conductor:',o.driver||'');
-  if(nuevoConductor===null)return;
-  if(!nuevoConductor.trim()){showToast('⚠️ Ingresa un nombre válido');return;}
-  const nuevaPatente=prompt('Patente del vehículo (opcional):',o.plate&&o.plate!=='—'?o.plate:'');
+  const listaTexto=conductoresExistentes.length?'\n\nConductores existentes: '+conductoresExistentes.join(', '):'';
+  const nuevoConductor=window.prompt('Conductor actual: '+(o.driver||'Sin asignar')+listaTexto+'\n\nEscribe el nombre del conductor:',o.driver||'');
+  if(nuevoConductor===null||nuevoConductor.trim()===''){
+    showToast('⚠️ No se realizó ningún cambio');
+    return;
+  }
   o.driver=nuevoConductor.trim();
-  if(nuevaPatente!==null&&nuevaPatente.trim()) o.plate=nuevaPatente.trim().toUpperCase();
   refreshAll();
   registrarHistorial('🚚 Conductor asignado', o.client+' · '+o.driver, '#60a5fa');
   showToast('✅ Conductor asignado: '+o.driver);
+}
+
+function asignarPatente(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  const nuevaPatente=window.prompt('Patente actual: '+(o.plate&&o.plate!=='—'?o.plate:'Sin asignar')+'\n\nEscribe la patente:',o.plate&&o.plate!=='—'?o.plate:'');
+  if(nuevaPatente===null||nuevaPatente.trim()==='')return;
+  o.plate=nuevaPatente.trim().toUpperCase();
+  refreshAll();
+  showToast('✅ Patente actualizada: '+o.plate);
 }
 
 function marcarEntregado(id){
