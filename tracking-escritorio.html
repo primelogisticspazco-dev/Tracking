@@ -1205,8 +1205,33 @@ function mostrarNotificacion18(){
 // MAPA CON RUTAS
 const BODEGA_ADDR = 'La Farfana 400, Pudahuel, Santiago, Chile';
 const BODEGA_COORDS = [-33.4456, -70.7892]; // La Farfana 400, Pudahuel
+const BODEGA2_ADDR = 'Miguel Faraday 02470 bodega 15, Temuco, Chile';
+const BODEGA2_COORDS = [-38.7359, -72.6190]; // Miguel Faraday, Temuco (aprox)
 let _mapa = null;
 let _rutaControl = null;
+
+// Ciudades/regiones que se consideran "zona sur" (vía Bodega Temuco)
+const ZONA_SUR = [
+  'temuco','padre las casas','villarrica','pucon','pucón','angol','victoria',
+  'lautaro','nueva imperial','carahue','loncoche','gorbea','toltén','tolten',
+  'valdivia','la union','la unión','panguipulli','futrono','lago ranco',
+  'osorno','rio negro','río negro','purranque','puerto octay',
+  'puerto montt','puerto varas','frutillar','llanquihue','calbuco',
+  'castro','ancud','quellon','quellón','chiloé','chiloe',
+  'araucanía','araucania','los ríos','los rios','los lagos'
+];
+const ZONA_CONCEPCION = [
+  'concepcion','concepción','talcahuano','chiguayante','san pedro de la paz',
+  'coronel','los angeles','los ángeles','chillan','chillán','cañete','cañete',
+  'biobío','biobio','bio bio','bío bío'
+];
+
+function clasificarZona(ciudad){
+  const c=(ciudad||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(ZONA_SUR.some(z=>c.includes(z.normalize('NFD').replace(/[\u0300-\u036f]/g,''))))return 'sur';
+  if(ZONA_CONCEPCION.some(z=>c.includes(z.normalize('NFD').replace(/[\u0300-\u036f]/g,''))))return 'concepcion';
+  return 'directo'; // cualquier otra ciudad: ruta directa desde Pudahuel
+}
 
 function populateMapaSelect(){
   const sel = document.getElementById('mapa-pedido-sel');
@@ -1224,16 +1249,20 @@ function populateMapaSelect(){
 
 function iniciarMapa(){
   if(_mapa) return;
-  _mapa = L.map('mapa-ruta').setView(BODEGA_COORDS, 10);
+  _mapa = L.map('mapa-ruta').setView(BODEGA_COORDS, 7);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     attribution:'© OpenStreetMap', maxZoom:19
   }).addTo(_mapa);
-  // Marcador bodega
   const iconoBodega = L.divIcon({
     html:`<div style="background:#0066ff;width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:16px">🏭</div>`,
     iconSize:[34,34],iconAnchor:[17,17],className:''
   });
-  L.marker(BODEGA_COORDS,{icon:iconoBodega}).addTo(_mapa).bindPopup('<b>Bodega Prime Logistic</b><br>La Farfana 400, Pudahuel');
+  L.marker(BODEGA_COORDS,{icon:iconoBodega}).addTo(_mapa).bindPopup('<b>Bodega Central</b><br>La Farfana 400, Pudahuel');
+  const iconoBodega2 = L.divIcon({
+    html:`<div style="background:#a78bfa;width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:16px">📦</div>`,
+    iconSize:[34,34],iconAnchor:[17,17],className:''
+  });
+  L.marker(BODEGA2_COORDS,{icon:iconoBodega2}).addTo(_mapa).bindPopup('<b>Bodega Temuco</b><br>Miguel Faraday 02470, bodega 15');
 }
 
 function trazarRuta(){
@@ -1242,7 +1271,6 @@ function trazarRuta(){
   const o = orders.find(x=>x.id===id);
   if(!o) return;
 
-  // Geocodificar dirección del cliente
   const query = encodeURIComponent(o.addr+', '+o.city+', Chile');
   fetch('https://nominatim.openstreetmap.org/search?format=json&q='+query+'&limit=1&countrycodes=cl')
     .then(r=>r.json())
@@ -1251,34 +1279,56 @@ function trazarRuta(){
       const lat = parseFloat(data[0].lat);
       const lon = parseFloat(data[0].lon);
 
-      // Limpiar ruta anterior
       if(_rutaControl){ _mapa.removeControl(_rutaControl); _rutaControl=null; }
 
-      // Ícono cliente
       const iconoCliente = L.divIcon({
         html:`<div style="background:#00d4aa;width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>`,
         iconSize:[34,34],iconAnchor:[17,34],className:''
       });
+      const iconoBodega = L.divIcon({
+        html:`<div style="background:#0066ff;width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:16px">🏭</div>`,
+        iconSize:[34,34],iconAnchor:[17,17],className:''
+      });
+      const iconoBodega2 = L.divIcon({
+        html:`<div style="background:#a78bfa;width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:16px">📦</div>`,
+        iconSize:[34,34],iconAnchor:[17,17],className:''
+      });
 
-      // Trazar ruta
+      // Clasificar zona y armar waypoints
+      const zona = clasificarZona(o.city);
+      let waypoints, etiquetaRuta, boundsArr;
+      if(zona==='sur'){
+        waypoints=[
+          L.latLng(BODEGA_COORDS[0],BODEGA_COORDS[1]),
+          L.latLng(BODEGA2_COORDS[0],BODEGA2_COORDS[1]),
+          L.latLng(lat,lon)
+        ];
+        etiquetaRuta='📦 Vía Bodega Temuco · Última milla zona sur';
+        boundsArr=[BODEGA_COORDS,BODEGA2_COORDS,[lat,lon]];
+      } else {
+        waypoints=[
+          L.latLng(BODEGA_COORDS[0],BODEGA_COORDS[1]),
+          L.latLng(lat,lon)
+        ];
+        etiquetaRuta = zona==='concepcion' ? '🏭 Ruta directa a Concepción' : '🏭 Ruta directa desde Pudahuel';
+        boundsArr=[BODEGA_COORDS,[lat,lon]];
+      }
+
       _rutaControl = L.Routing.control({
-        waypoints:[
-          L.latLng(BODEGA_COORDS[0], BODEGA_COORDS[1]),
-          L.latLng(lat, lon)
-        ],
+        waypoints:waypoints,
         routeWhileDragging:false,
         showAlternatives:false,
         lineOptions:{styles:[{color:'#00d4aa',weight:4,opacity:.8}]},
         createMarker: function(i, wp){
-          return L.marker(wp.latLng, {icon: i===0 ? L.divIcon({
-            html:`<div style="background:#0066ff;width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:16px">🏭</div>`,
-            iconSize:[34,34],iconAnchor:[17,17],className:''
-          }) : iconoCliente});
+          const esUltimo = i===waypoints.length-1;
+          const esTemuco = zona==='sur' && i===1;
+          let icon = esUltimo ? iconoCliente : (esTemuco ? iconoBodega2 : iconoBodega);
+          let label = esUltimo ? o.client : (esTemuco ? 'Bodega Temuco' : 'Bodega Central — Pudahuel');
+          return L.marker(wp.latLng,{icon:icon}).bindPopup('<b>'+label+'</b>');
         },
         containerClassName:'leaflet-routing-container-hidden'
       }).addTo(_mapa);
 
-      // Mostrar info del pedido
       _rutaControl.on('routesfound', function(e){
         const ruta = e.routes[0];
         const km = (ruta.summary.totalDistance/1000).toFixed(1);
@@ -1304,9 +1354,12 @@ function trazarRuta(){
             <div style="font-size:12px;font-weight:600">${o.driver}</div>
             <div style="font-size:10px;color:var(--muted);font-family:var(--mono)">${o.plate}</div>
           </div>
+          <div style="margin:10px 0;padding:8px;background:${zona==='sur'?'rgba(167,139,250,.08)':'rgba(0,102,255,.08)'};border:1px solid ${zona==='sur'?'rgba(167,139,250,.2)':'rgba(0,102,255,.2)'};border-radius:6px">
+            <div style="font-size:10px;color:${zona==='sur'?'var(--purple)':'var(--accent2)'};font-weight:700">${etiquetaRuta}</div>
+          </div>
           <div style="padding:10px;background:var(--card);border-radius:8px;margin-top:12px">
             <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-              <span style="font-size:11px;color:var(--muted)">Distancia</span>
+              <span style="font-size:11px;color:var(--muted)">Distancia total</span>
               <span style="font-size:12px;font-weight:700;color:var(--accent)">${km} km</span>
             </div>
             <div style="display:flex;justify-content:space-between;margin-bottom:6px">
@@ -1322,7 +1375,7 @@ function trazarRuta(){
         document.getElementById('mapa-info-panel').style.display='block';
       });
 
-      _mapa.fitBounds([BODEGA_COORDS,[lat,lon]],{padding:[30,30]});
+      _mapa.fitBounds(boundsArr,{padding:[30,30]});
     })
     .catch(()=>showToast('⚠️ Error al calcular la ruta'));
 }
