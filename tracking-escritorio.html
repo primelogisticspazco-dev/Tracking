@@ -215,16 +215,24 @@ select.f-inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
 
     <!-- DASHBOARD -->
     <div id="view-dashboard">
-      <div class="otif-big">
-        <div class="otif-bg">OTIF</div>
-        <div class="otif-big-num" id="otif-num">91%</div>
-        <div class="otif-big-info">
-          <div class="otif-big-title">OTIF del día</div>
-          <div class="otif-big-sub" id="otif-sub">38 de 42 entregas correctas · Meta: 95%</div>
+      <div style="display:grid;grid-template-columns:1fr 280px;gap:14px;margin-bottom:20px">
+        <div class="otif-big" style="margin-bottom:0">
+          <div class="otif-bg">OTIF</div>
+          <div class="otif-big-num" id="otif-num">91%</div>
+          <div class="otif-big-info">
+            <div class="otif-big-title">OTIF del día</div>
+            <div class="otif-big-sub" id="otif-sub">38 de 42 entregas correctas · Meta: 95%</div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div style="font-size:11px;color:var(--muted)">Última actualización</div>
+            <div style="font-size:13px;font-weight:700;color:var(--accent)" id="otif-time">—</div>
+          </div>
         </div>
-        <div style="margin-left:auto;text-align:right">
-          <div style="font-size:11px;color:var(--muted)">Última actualización</div>
-          <div style="font-size:13px;font-weight:700;color:var(--accent)" id="otif-time">—</div>
+        <div style="background:var(--card);border:1px solid var(--warn);border-radius:14px;padding:16px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden">
+          <div style="position:absolute;right:-15px;top:-10px;font-size:70px;font-weight:900;color:rgba(245,158,11,.06)">$</div>
+          <div style="font-size:11px;font-weight:700;color:var(--warn);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">💰 Costo total del día</div>
+          <div style="font-size:26px;font-weight:800;font-family:var(--mono);color:var(--warn)" id="costo-total">$0</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px" id="costo-promedio">Promedio por pedido: $0</div>
         </div>
       </div>
 
@@ -441,6 +449,7 @@ select.f-inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
         <option value="ruta" selected>En Ruta</option><option value="pendiente">Pendiente</option>
       </select>
     </div>
+    <div class="f-group"><label class="f-label">Costo del viaje (CLP)</label><input class="f-inp" id="f-costo" placeholder="0" type="number" onkeydown="enterGuardar(event)"/></div>
     <button class="btn-add" onclick="agregarPedido()">+ Agregar pedido <span style="opacity:.6;font-size:11px">(Enter)</span></button>
     <button class="btn-reset" onclick="resetForm()">Limpiar formulario (Esc)</button>
 
@@ -580,6 +589,7 @@ function renderTabla(containerId){
                 ${o.telefono?`<button class="act-btn act-wa" onclick="waRapido('${o.id}')">WA</button>`:''}
                 <button class="act-btn act-edit" onclick="asignarConductor('${o.id}')">🚚 Conductor</button>
                 <button class="act-btn act-edit" onclick="asignarPatente('${o.id}')">🔑</button>
+                <button class="act-btn act-edit" onclick="asignarCosto('${o.id}')">💰</button>
                 <button class="act-btn act-edit" onclick="editarEstado('${o.id}')">Estado ▾</button>
               </div>
             </td>
@@ -627,6 +637,17 @@ function asignarPatente(id){
   showToast('✅ Patente actualizada: '+o.plate);
 }
 
+function asignarCosto(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  const nuevoCosto=window.prompt('Costo actual: $'+(o.costo||0).toLocaleString('es-CL')+'\n\nEscribe el costo del viaje (CLP):',o.costo||'');
+  if(nuevoCosto===null)return;
+  const valor=parseFloat(nuevoCosto);
+  if(isNaN(valor)||valor<0){showToast('⚠️ Ingresa un número válido');return;}
+  o.costo=valor;
+  refreshAll();
+  showToast('✅ Costo actualizado: $'+valor.toLocaleString('es-CL'));
+}
+
 function marcarEntregado(id){
   const o=orders.find(x=>x.id===id);if(!o||o.status==='entregado')return;
   if(counts[o.status]!==undefined&&counts[o.status]>0)counts[o.status]--;
@@ -658,6 +679,13 @@ function updateKPI(){
     if(bar)bar.style.width=total>0?Math.round(counts[k]/total*100)+'%':'0%';
   });
   const kb=document.getElementById('kpi-otif-big');if(kb)kb.textContent=rate+'%';
+  // Costo total
+  const costoTotal=orders.reduce((sum,o)=>sum+(o.costo||0),0);
+  const promCosto=orders.length>0?Math.round(costoTotal/orders.length):0;
+  const ctEl=document.getElementById('costo-total');
+  if(ctEl) ctEl.textContent='$'+costoTotal.toLocaleString('es-CL');
+  const cpEl=document.getElementById('costo-promedio');
+  if(cpEl) cpEl.textContent='Promedio por pedido: $'+promCosto.toLocaleString('es-CL');
 }
 
 function renderKPIDist(){
@@ -722,6 +750,7 @@ function agregarPedido(){
   const ndoc=document.getElementById('f-ndoc').value.trim();
   const city=document.getElementById('f-ciudad').value.trim()||'Santiago';
   const region=document.getElementById('f-region').value;
+  const costo=parseFloat(document.getElementById('f-costo').value)||0;
   const o={
     id:tipo+'-'+( ndoc||Math.floor(Math.random()*9000+1000)),
     remitente:r||'Sin remitente',client:c,
@@ -733,6 +762,7 @@ function agregarPedido(){
     plate:document.getElementById('f-patente').value.trim().toUpperCase()||'—',
     eta:document.getElementById('f-eta').value,
     status:document.getElementById('f-status').value,
+    costo:costo,
     alert:false
   };
   orders.unshift(o);
@@ -743,7 +773,7 @@ function agregarPedido(){
 }
 
 function resetForm(){
-  ['f-remitente','f-cliente','f-tel','f-dir','f-ciudad','f-ndoc','f-conductor','f-patente'].forEach(id=>{
+  ['f-remitente','f-cliente','f-tel','f-dir','f-ciudad','f-ndoc','f-conductor','f-patente','f-costo'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
   });
   document.getElementById('f-status').value='ruta';
@@ -978,6 +1008,7 @@ function leerExcel(file){
           plate:(r['Patente']||r['patente']||r['PATENTE']||'—').toString().trim().toUpperCase(),
           eta:(r['ETA']||r['eta']||'—').toString().trim(),
           status:status,
+          costo:parseFloat(r['Costo']||r['costo']||r['COSTO']||0)||0,
           alert:status==='incidencia'||status==='pendiente'
         };
       }).filter(o=>o.client&&o.client!=='Sin nombre'||o.doc);
@@ -1041,9 +1072,9 @@ function mostrarResultado(id,msg,type){
 
 function descargarPlantilla(){
   const ws=XLSX.utils.aoa_to_sheet([
-    ['Remitente','Cliente','Telefono','Direccion','Ciudad','Region','Documento','Conductor','Patente','ETA','Estado'],
-    ['Bodega Central','Comercial Fuentes Ltda.','+56912340001','Av. Grecia 2800','Ñuñoa','RM','GD-0001','Carlos Vera','RVTK-32','13:30','ruta'],
-    ['Bodega Central','Ferretería Del Sur','+56912340002','San Martín 450','Temuco','Araucanía','GD-0002','Mario Soto','BNJK-91','10:30','transito'],
+    ['Remitente','Cliente','Telefono','Direccion','Ciudad','Region','Documento','Conductor','Patente','ETA','Estado','Costo'],
+    ['Bodega Central','Comercial Fuentes Ltda.','+56912340001','Av. Grecia 2800','Ñuñoa','RM','GD-0001','Carlos Vera','RVTK-32','13:30','ruta',15000],
+    ['Bodega Central','Ferretería Del Sur','+56912340002','San Martín 450','Temuco','Araucanía','GD-0002','Mario Soto','BNJK-91','10:30','transito',45000],
   ]);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Pedidos');
@@ -1065,6 +1096,7 @@ function exportarPedidos(){
     Patente:o.plate,
     ETA:o.eta,
     Estado:o.status,
+    Costo:o.costo||0,
     Alerta:o.alert?'Sí':'No'
   }));
   const ws=XLSX.utils.json_to_sheet(rows);
