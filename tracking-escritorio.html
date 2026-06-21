@@ -426,6 +426,14 @@ select.f-inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
         </select>
       </div>
     </div>
+    <div class="f-group"><label class="f-label">Ruta de despacho</label>
+      <select class="f-inp" id="f-ruta">
+        <option value="auto">🤖 Automático (según ciudad)</option>
+        <option value="directo">🏭 Directo desde Pudahuel</option>
+        <option value="temuco">📦 Vía Bodega Temuco</option>
+        <option value="concepcion">📦 Vía Bodega Concepción</option>
+      </select>
+    </div>
     <div class="f-row2">
       <div class="f-group"><label class="f-label">Tipo doc</label>
         <select class="f-inp" id="f-tipo"><option value="GD">GD</option><option value="FAC">Factura</option><option value="OC">OC</option></select>
@@ -590,6 +598,7 @@ function renderTabla(containerId){
                 <button class="act-btn act-edit" onclick="asignarConductor('${o.id}')">🚚 Conductor</button>
                 <button class="act-btn act-edit" onclick="asignarPatente('${o.id}')">🔑</button>
                 <button class="act-btn act-edit" onclick="asignarCosto('${o.id}')">💰</button>
+                <button class="act-btn act-edit" onclick="asignarRuta('${o.id}')" title="Ruta de despacho">🗺️</button>
                 <button class="act-btn act-edit" onclick="editarEstado('${o.id}')">Estado ▾</button>
               </div>
             </td>
@@ -646,6 +655,20 @@ function asignarCosto(id){
   o.costo=valor;
   refreshAll();
   showToast('✅ Costo actualizado: $'+valor.toLocaleString('es-CL'));
+}
+
+function asignarRuta(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  const actual=o.rutaManual?({temuco:'Vía Bodega Temuco',concepcion:'Vía Bodega Concepción',directo:'Directo desde Pudahuel'})[o.rutaManual]:'Automático (según ciudad)';
+  const opciones='\n\n1 = Automático (según ciudad)\n2 = Directo desde Pudahuel\n3 = Vía Bodega Temuco\n4 = Vía Bodega Concepción';
+  const eleccion=window.prompt('Ruta actual: '+actual+opciones+'\n\nEscribe el número de opción:','');
+  if(eleccion===null)return;
+  const mapa={'1':null,'2':'directo','3':'temuco','4':'concepcion'};
+  if(!(eleccion in mapa)){showToast('⚠️ Opción inválida, escribe 1, 2, 3 o 4');return;}
+  o.rutaManual=mapa[eleccion];
+  refreshAll();
+  const nombres={null:'Automático',directo:'Directo desde Pudahuel',temuco:'Vía Bodega Temuco',concepcion:'Vía Bodega Concepción'};
+  showToast('✅ Ruta asignada: '+nombres[o.rutaManual]);
 }
 
 function marcarEntregado(id){
@@ -751,6 +774,7 @@ function agregarPedido(){
   const city=document.getElementById('f-ciudad').value.trim()||'Santiago';
   const region=document.getElementById('f-region').value;
   const costo=parseFloat(document.getElementById('f-costo').value)||0;
+  const rutaManual=document.getElementById('f-ruta').value;
   const o={
     id:tipo+'-'+( ndoc||Math.floor(Math.random()*9000+1000)),
     remitente:r||'Sin remitente',client:c,
@@ -763,6 +787,7 @@ function agregarPedido(){
     eta:document.getElementById('f-eta').value,
     status:document.getElementById('f-status').value,
     costo:costo,
+    rutaManual:rutaManual!=='auto'?rutaManual:null,
     alert:false
   };
   orders.unshift(o);
@@ -778,6 +803,7 @@ function resetForm(){
   });
   document.getElementById('f-status').value='ruta';
   document.getElementById('f-eta').value='13:30';
+  document.getElementById('f-ruta').value='auto';
   document.getElementById('f-remitente').focus();
 }
 
@@ -1009,6 +1035,7 @@ function leerExcel(file){
           eta:(r['ETA']||r['eta']||'—').toString().trim(),
           status:status,
           costo:parseFloat(r['Costo']||r['costo']||r['COSTO']||0)||0,
+          rutaManual:normRuta(r['Ruta']||r['ruta']||r['RUTA']||r['RutaDespacho']||''),
           alert:status==='incidencia'||status==='pendiente'
         };
       }).filter(o=>o.client&&o.client!=='Sin nombre'||o.doc);
@@ -1021,6 +1048,15 @@ function leerExcel(file){
 function normStatus(s){
   const m={'retirado':'retirado','transito':'transito','tránsito':'transito','en tránsito':'transito','en transito':'transito','ruta':'ruta','en ruta':'ruta','entregado':'entregado','pendiente':'pendiente','incidencia':'incidencia'};
   return m[s.toLowerCase()]||'ruta';
+}
+
+function normRuta(s){
+  if(!s) return null;
+  const c=s.toString().toLowerCase().trim();
+  if(c.includes('temuco')) return 'temuco';
+  if(c.includes('concep')) return 'concepcion';
+  if(c.includes('directo')) return 'directo';
+  return null; // automático
 }
 
 function mostrarPreviewExcel(pedidos){
@@ -1072,9 +1108,11 @@ function mostrarResultado(id,msg,type){
 
 function descargarPlantilla(){
   const ws=XLSX.utils.aoa_to_sheet([
-    ['Remitente','Cliente','Telefono','Direccion','Ciudad','Region','Documento','Conductor','Patente','ETA','Estado','Costo'],
-    ['Bodega Central','Comercial Fuentes Ltda.','+56912340001','Av. Grecia 2800','Ñuñoa','RM','GD-0001','Carlos Vera','RVTK-32','13:30','ruta',15000],
-    ['Bodega Central','Ferretería Del Sur','+56912340002','San Martín 450','Temuco','Araucanía','GD-0002','Mario Soto','BNJK-91','10:30','transito',45000],
+    ['Remitente','Cliente','Telefono','Direccion','Ciudad','Region','Documento','Conductor','Patente','ETA','Estado','Costo','Ruta'],
+    ['Bodega Central','Comercial Fuentes Ltda.','+56912340001','Av. Grecia 2800','Ñuñoa','RM','GD-0001','Carlos Vera','RVTK-32','13:30','ruta',15000,''],
+    ['Bodega Central','Ferretería Del Sur','+56912340002','San Martín 450','Temuco','Araucanía','GD-0002','Mario Soto','BNJK-91','10:30','transito',45000,'temuco'],
+    ['Bodega Central','Cliente Concepción','+56912340003','Av. O Higgins 500','Concepción','Biobío','GD-0003','Luis Rojas','XYZA-12','11:00','ruta',38000,'directo'],
+    ['Bodega Central','Cliente Talcahuano','+56912340004','Colon 800','Talcahuano','Biobío','GD-0004','Luis Rojas','XYZA-12','11:30','ruta',38000,'concepcion'],
   ]);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Pedidos');
@@ -1097,6 +1135,7 @@ function exportarPedidos(){
     ETA:o.eta,
     Estado:o.status,
     Costo:o.costo||0,
+    Ruta:o.rutaManual||'',
     Alerta:o.alert?'Sí':'No'
   }));
   const ws=XLSX.utils.json_to_sheet(rows);
@@ -1287,6 +1326,8 @@ const BODEGA_ADDR = 'La Farfana 400, Pudahuel, Santiago, Chile';
 const BODEGA_COORDS = [-33.4456, -70.7892]; // La Farfana 400, Pudahuel
 const BODEGA2_ADDR = 'Miguel Faraday 02470 bodega 15, Temuco, Chile';
 const BODEGA2_COORDS = [-38.7359, -72.6190]; // Miguel Faraday, Temuco (aprox)
+const BODEGA3_ADDR = 'Bodega Concepción, Lo Florida, Concepción, Chile';
+const BODEGA3_COORDS = [-36.8489, -73.0145]; // Sector Lo Florida, Concepción (aprox)
 let _mapa = null;
 let _rutaControl = null;
 
@@ -1300,13 +1341,23 @@ const ZONA_SUR = [
   'castro','ancud','quellon','quellón','chiloé','chiloe',
   'araucanía','araucania','los ríos','los rios','los lagos'
 ];
+// Ciudades/regiones que se consideran "zona Concepción" (vía Bodega Concepción)
 const ZONA_CONCEPCION = [
   'concepcion','concepción','talcahuano','chiguayante','san pedro de la paz',
-  'coronel','los angeles','los ángeles','chillan','chillán','cañete','cañete',
-  'biobío','biobio','bio bio','bío bío'
+  'coronel','los angeles','los ángeles','chillan','chillán','cañete',
+  'biobío','biobio','bio bio','bío bío','hualpen','hualpén','penco','tome','tomé',
+  'lota','santa juana','florida','hualqui','yumbel','laja','nacimiento',
+  'mulchen','mulchén','negrete','quilleco','antuco','tucapel','curanilahue',
+  'lebu','arauco','contulmo'
 ];
 
-function clasificarZona(ciudad){
+function clasificarZona(ciudad, pedido){
+  // Si el pedido tiene ruta manual asignada, esa tiene prioridad
+  if(pedido && pedido.rutaManual){
+    if(pedido.rutaManual==='temuco') return 'sur';
+    if(pedido.rutaManual==='concepcion') return 'concepcion';
+    if(pedido.rutaManual==='directo') return 'directo';
+  }
   const c=(ciudad||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   if(ZONA_SUR.some(z=>c.includes(z.normalize('NFD').replace(/[\u0300-\u036f]/g,''))))return 'sur';
   if(ZONA_CONCEPCION.some(z=>c.includes(z.normalize('NFD').replace(/[\u0300-\u036f]/g,''))))return 'concepcion';
@@ -1373,9 +1424,9 @@ async function trazarRutaManual(){
   }
   if(!geocoded.length){ showToast('⚠️ No se pudieron ubicar las direcciones'); return; }
 
-  const ciudadesSur=geocoded.filter(g=>clasificarZona(g.pedido.city)==='sur').length;
-  const origenRuta = ciudadesSur>geocoded.length/2 ? {lat:BODEGA2_COORDS[0],lon:BODEGA2_COORDS[1]} : {lat:BODEGA_COORDS[0],lon:BODEGA_COORDS[1]};
-  const origenLabel = ciudadesSur>geocoded.length/2 ? 'Bodega Temuco' : 'Bodega Central Pudahuel';
+  const origen=determinarOrigenRuta(geocoded);
+  const origenRuta = {lat:origen.lat,lon:origen.lon};
+  const origenLabel = origen.label;
 
   const ordenOptimo=optimizarOrden(origenRuta, geocoded);
 
@@ -1480,6 +1531,19 @@ function populateConductorSelect(){
   if(cur)sel.value=cur;
 }
 
+// Determina el mejor origen (bodega) según la mayoría de zonas de los pedidos
+function determinarOrigenRuta(geocoded){
+  const ciudadesSur=geocoded.filter(g=>clasificarZona(g.pedido.city,g.pedido)==='sur').length;
+  const ciudadesConce=geocoded.filter(g=>clasificarZona(g.pedido.city,g.pedido)==='concepcion').length;
+  if(ciudadesSur>=ciudadesConce && ciudadesSur>geocoded.length/2){
+    return {lat:BODEGA2_COORDS[0],lon:BODEGA2_COORDS[1],label:'Bodega Temuco'};
+  }
+  if(ciudadesConce>ciudadesSur && ciudadesConce>geocoded.length/2){
+    return {lat:BODEGA3_COORDS[0],lon:BODEGA3_COORDS[1],label:'Bodega Concepción'};
+  }
+  return {lat:BODEGA_COORDS[0],lon:BODEGA_COORDS[1],label:'Bodega Central Pudahuel'};
+}
+
 // Geocodificar dirección (helper)
 function geocodificar(addr,city){
   const query=encodeURIComponent(addr+', '+city+', Chile');
@@ -1523,9 +1587,9 @@ async function trazarHojaRuta(){
   if(!geocoded.length){ showToast('⚠️ No se pudieron ubicar las direcciones'); return; }
 
   // Determinar punto de partida según zona predominante
-  const ciudadesSur=geocoded.filter(g=>clasificarZona(g.pedido.city)==='sur').length;
-  const origenRuta = ciudadesSur>geocoded.length/2 ? {lat:BODEGA2_COORDS[0],lon:BODEGA2_COORDS[1]} : {lat:BODEGA_COORDS[0],lon:BODEGA_COORDS[1]};
-  const origenLabel = ciudadesSur>geocoded.length/2 ? 'Bodega Temuco' : 'Bodega Central Pudahuel';
+  const origen=determinarOrigenRuta(geocoded);
+  const origenRuta = {lat:origen.lat,lon:origen.lon};
+  const origenLabel = origen.label;
 
   // Optimizar orden con nearest neighbor
   const ordenOptimo=optimizarOrden(origenRuta, geocoded);
@@ -1634,7 +1698,7 @@ function populateMapaSelect(){
 
 function iniciarMapa(){
   if(_mapa) return;
-  _mapa = L.map('mapa-ruta').setView(BODEGA_COORDS, 7);
+  _mapa = L.map('mapa-ruta').setView(BODEGA_COORDS, 6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     attribution:'© OpenStreetMap', maxZoom:19
   }).addTo(_mapa);
@@ -1648,6 +1712,11 @@ function iniciarMapa(){
     iconSize:[34,34],iconAnchor:[17,17],className:''
   });
   L.marker(BODEGA2_COORDS,{icon:iconoBodega2}).addTo(_mapa).bindPopup('<b>Bodega Temuco</b><br>Miguel Faraday 02470, bodega 15');
+  const iconoBodega3 = L.divIcon({
+    html:`<div style="background:#f59e0b;width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:16px">📦</div>`,
+    iconSize:[34,34],iconAnchor:[17,17],className:''
+  });
+  L.marker(BODEGA3_COORDS,{icon:iconoBodega3}).addTo(_mapa).bindPopup('<b>Bodega Concepción</b><br>Sector Lo Florida, Concepción');
 }
 
 function trazarRuta(){
@@ -1674,28 +1743,32 @@ function trazarRuta(){
         html:`<div style="background:#0066ff;width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:16px">🏭</div>`,
         iconSize:[34,34],iconAnchor:[17,17],className:''
       });
-      const iconoBodega2 = L.divIcon({
+      const iconoBodegaSecundaria = L.divIcon({
         html:`<div style="background:#a78bfa;width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:16px">📦</div>`,
         iconSize:[34,34],iconAnchor:[17,17],className:''
       });
 
-      // Clasificar zona y armar waypoints
-      const zona = clasificarZona(o.city);
+      // Clasificar zona y determinar bodega intermedia
+      const zona = clasificarZona(o.city, o);
+      const usaTramoBodega = zona==='sur' || zona==='concepcion';
+      const bodegaSecundaria = zona==='sur' ? {coords:BODEGA2_COORDS,nombre:'Bodega Temuco'} :
+                                zona==='concepcion' ? {coords:BODEGA3_COORDS,nombre:'Bodega Concepción'} : null;
+
       let waypoints, etiquetaRuta, boundsArr;
-      if(zona==='sur'){
+      if(usaTramoBodega){
         waypoints=[
           L.latLng(BODEGA_COORDS[0],BODEGA_COORDS[1]),
-          L.latLng(BODEGA2_COORDS[0],BODEGA2_COORDS[1]),
+          L.latLng(bodegaSecundaria.coords[0],bodegaSecundaria.coords[1]),
           L.latLng(lat,lon)
         ];
-        etiquetaRuta='📦 Vía Bodega Temuco · Última milla zona sur';
-        boundsArr=[BODEGA_COORDS,BODEGA2_COORDS,[lat,lon]];
+        etiquetaRuta='📦 Vía '+bodegaSecundaria.nombre+' · Última milla zona '+(zona==='sur'?'sur':'Concepción');
+        boundsArr=[BODEGA_COORDS,bodegaSecundaria.coords,[lat,lon]];
       } else {
         waypoints=[
           L.latLng(BODEGA_COORDS[0],BODEGA_COORDS[1]),
           L.latLng(lat,lon)
         ];
-        etiquetaRuta = zona==='concepcion' ? '🏭 Ruta directa a Concepción' : '🏭 Ruta directa desde Pudahuel';
+        etiquetaRuta = '🏭 Ruta directa desde Pudahuel';
         boundsArr=[BODEGA_COORDS,[lat,lon]];
       }
 
@@ -1706,9 +1779,9 @@ function trazarRuta(){
         lineOptions:{styles:[{color:'#00d4aa',weight:4,opacity:.8}]},
         createMarker: function(i, wp){
           const esUltimo = i===waypoints.length-1;
-          const esTemuco = zona==='sur' && i===1;
-          let icon = esUltimo ? iconoCliente : (esTemuco ? iconoBodega2 : iconoBodega);
-          let label = esUltimo ? o.client : (esTemuco ? 'Bodega Temuco' : 'Bodega Central — Pudahuel');
+          const esBodegaSecundaria = usaTramoBodega && i===1;
+          let icon = esUltimo ? iconoCliente : (esBodegaSecundaria ? iconoBodegaSecundaria : iconoBodega);
+          let label = esUltimo ? o.client : (esBodegaSecundaria ? bodegaSecundaria.nombre : 'Bodega Central — Pudahuel');
           return L.marker(wp.latLng,{icon:icon}).bindPopup('<b>'+label+'</b>');
         },
         containerClassName:'leaflet-routing-container-hidden'
@@ -1722,10 +1795,10 @@ function trazarRuta(){
         const minRest = mins%60;
         const tiempoStr = horas>0 ? horas+'h '+minRest+'min' : mins+'min';
 
-        // Si es zona sur, calcular tramo específico Temuco → Cliente con OSRM real
-        if(zona==='sur'){
+        // Si usa bodega intermedia, calcular tramo específico Bodega → Cliente con OSRM real
+        if(usaTramoBodega){
           const url='https://router.project-osrm.org/route/v1/driving/'+
-            BODEGA2_COORDS[1]+','+BODEGA2_COORDS[0]+';'+lon+','+lat+
+            bodegaSecundaria.coords[1]+','+bodegaSecundaria.coords[0]+';'+lon+','+lat+
             '?overview=false';
           fetch(url)
             .then(r=>r.json())
@@ -1735,11 +1808,11 @@ function trazarRuta(){
                 const minsTramo=Math.round(d.routes[0].duration/60);
                 const hT=Math.floor(minsTramo/60), mT=minsTramo%60;
                 const tiempoTramoStr = hT>0 ? hT+'h '+mT+'min' : minsTramo+'min';
-                const panel=document.getElementById('mapa-tramo-sur');
+                const panel=document.getElementById('mapa-tramo-bodega');
                 if(panel){
                   panel.innerHTML=`
                   <div style="padding:10px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:8px;margin-top:10px">
-                    <div style="font-size:10px;color:var(--purple);font-weight:700;margin-bottom:6px">📦 Última milla — Temuco → ${o.city}</div>
+                    <div style="font-size:10px;color:var(--purple);font-weight:700;margin-bottom:6px">📦 Última milla — ${bodegaSecundaria.nombre} → ${o.city}</div>
                     <div style="display:flex;justify-content:space-between;margin-bottom:4px">
                       <span style="font-size:11px;color:var(--muted)">Distancia</span>
                       <span style="font-size:12px;font-weight:700;color:var(--purple)">${kmTramo} km</span>
@@ -1773,10 +1846,10 @@ function trazarRuta(){
             <div style="font-size:12px;font-weight:600">${o.driver}</div>
             <div style="font-size:10px;color:var(--muted);font-family:var(--mono)">${o.plate}</div>
           </div>
-          <div style="margin:10px 0;padding:8px;background:${zona==='sur'?'rgba(167,139,250,.08)':'rgba(0,102,255,.08)'};border:1px solid ${zona==='sur'?'rgba(167,139,250,.2)':'rgba(0,102,255,.2)'};border-radius:6px">
-            <div style="font-size:10px;color:${zona==='sur'?'var(--purple)':'var(--accent2)'};font-weight:700">${etiquetaRuta}</div>
+          <div style="margin:10px 0;padding:8px;background:${usaTramoBodega?'rgba(167,139,250,.08)':'rgba(0,102,255,.08)'};border:1px solid ${usaTramoBodega?'rgba(167,139,250,.2)':'rgba(0,102,255,.2)'};border-radius:6px">
+            <div style="font-size:10px;color:${usaTramoBodega?'var(--purple)':'var(--accent2)'};font-weight:700">${etiquetaRuta}</div>
           </div>
-          ${zona==='sur'?'<div id="mapa-tramo-sur"></div>':''}
+          ${usaTramoBodega?'<div id="mapa-tramo-bodega"></div>':''}
           <div style="padding:10px;background:var(--card);border-radius:8px;margin-top:12px">
             <div style="display:flex;justify-content:space-between;margin-bottom:6px">
               <span style="font-size:11px;color:var(--muted)">Distancia total</span>
