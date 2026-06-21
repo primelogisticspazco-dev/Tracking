@@ -400,7 +400,14 @@ select.f-inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
     <!-- HISTORIAL -->
     <div id="view-historial" style="display:none">
       <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:20px;max-width:600px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:16px">Historial de eventos</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px">
+          <div style="font-size:13px;font-weight:700">Historial de eventos</div>
+          <input class="search-inp" id="hist-search-cliente" placeholder="Buscar cliente..." oninput="renderHistDesktop()" style="width:200px"/>
+        </div>
+        <div id="hist-filtro-activo" style="display:none;margin-bottom:10px;padding:8px 12px;background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.2);border-radius:8px;font-size:11px;color:var(--accent);display:flex;align-items:center;justify-content:space-between">
+          <span id="hist-filtro-texto"></span>
+          <button onclick="document.getElementById('hist-search-cliente').value='';renderHistDesktop()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;font-weight:700">✕</button>
+        </div>
         <div id="hist-desktop"></div>
       </div>
     </div>
@@ -737,13 +744,33 @@ function renderKPIDist(){
 
 // HISTORIAL
 function renderHistDesktop(){
-  document.getElementById('hist-desktop').innerHTML=historial.map((h,i)=>`
+  const inp=document.getElementById('hist-search-cliente');
+  const q=inp?inp.value.trim().toLowerCase():'';
+  const filtrado=q?historial.filter(h=>(h.detail||'').toLowerCase().includes(q)||(h.event||'').toLowerCase().includes(q)):historial;
+
+  const filtroBox=document.getElementById('hist-filtro-activo');
+  const filtroTexto=document.getElementById('hist-filtro-texto');
+  if(filtroBox&&filtroTexto){
+    if(q){
+      filtroBox.style.display='flex';
+      filtroTexto.textContent='Filtrando: "'+q+'" · '+filtrado.length+' evento'+(filtrado.length!==1?'s':'');
+    } else {
+      filtroBox.style.display='none';
+    }
+  }
+
+  if(!filtrado.length){
+    document.getElementById('hist-desktop').innerHTML='<div style="text-align:center;padding:20px;font-size:12px;color:var(--muted)">Sin eventos encontrados</div>';
+    return;
+  }
+
+  document.getElementById('hist-desktop').innerHTML=filtrado.map((h,i)=>`
     <div style="display:flex;gap:12px;margin-bottom:14px">
       <div style="display:flex;flex-direction:column;align-items:center">
         <div style="width:10px;height:10px;border-radius:50%;background:${h.color};flex-shrink:0"></div>
-        ${i<historial.length-1?`<div style="width:1px;flex:1;background:var(--bdr);min-height:20px"></div>`:''}
+        ${i<filtrado.length-1?`<div style="width:1px;flex:1;background:var(--bdr);min-height:20px"></div>`:''}
       </div>
-      <div style="flex:1;padding-bottom:${i<historial.length-1?'14px':'0'}">
+      <div style="flex:1;padding-bottom:${i<filtrado.length-1?'14px':'0'}">
         <div style="display:flex;justify-content:space-between">
           <span style="font-size:13px;font-weight:600;color:${h.color}">${h.event}</span>
           <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">${h.time}</span>
