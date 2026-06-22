@@ -1987,9 +1987,9 @@ function mostrarGeocerca(lat, lon, nombre){
     fillColor: '#ef4444',
     fillOpacity: 0.12,
     weight: 2.5,
-    dashArray: '6,6'
+    dashArray: '6,6',
+    interactive: false
   }).addTo(_mapa);
-  _geocercaCirculo.bindPopup('<b>Geocerca</b><br>'+nombre+'<br>Radio: '+(radio>=1000?(radio/1000)+' km':radio+' m'));
 }
 
 function limpiarGeocerca(){
