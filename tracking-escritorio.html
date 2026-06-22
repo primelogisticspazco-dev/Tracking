@@ -328,6 +328,18 @@ select.f-inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
             <div id="mapa-manual-lista" style="max-height:160px;overflow-y:auto;margin-top:8px;border:1px solid var(--bdr);border-radius:8px;background:rgba(255,255,255,.02)"></div>
             <div id="mapa-manual-contador" style="font-size:11px;color:var(--muted);margin-top:6px">0 pedidos seleccionados</div>
           </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr)">
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);cursor:pointer">
+              <input type="checkbox" id="geocerca-toggle" onchange="toggleGeocerca()" style="width:14px;height:14px;cursor:pointer"/>
+              📍 Mostrar geocerca (radio de cobertura)
+            </label>
+            <select class="f-inp" id="geocerca-radio" onchange="actualizarGeocerca()" style="width:auto;padding:5px 10px;font-size:11px;display:none">
+              <option value="500">500 m</option>
+              <option value="1000" selected>1 km</option>
+              <option value="2000">2 km</option>
+              <option value="5000">5 km</option>
+            </select>
+          </div>
         </div>
         <div style="display:flex;gap:0">
           <div id="mapa-ruta" style="height:500px;flex:1"></div>
@@ -1799,8 +1811,10 @@ function trazarRuta(){
       if(!coords){ showToast('⚠️ No se encontró la dirección'); return; }
       const lat = coords.lat;
       const lon = coords.lon;
+      window._ultimoClienteLatLon = {lat, lon, nombre:o.client};
 
       if(_rutaControl){ _mapa.removeControl(_rutaControl); _rutaControl=null; }
+      limpiarGeocerca();
 
       const iconoCliente = L.divIcon({
         html:`<div style="background:#00d4aa;width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>`,
@@ -1936,8 +1950,53 @@ function trazarRuta(){
       });
 
       _mapa.fitBounds(boundsArr,{padding:[30,30]});
+
+      // Mostrar geocerca si está activada
+      if(document.getElementById('geocerca-toggle').checked){
+        mostrarGeocerca(lat, lon, o.client);
+      }
     })
     .catch(()=>showToast('⚠️ Error al calcular la ruta'));
+}
+
+// GEOCERCA
+let _geocercaCirculo = null;
+
+function toggleGeocerca(){
+  const activo = document.getElementById('geocerca-toggle').checked;
+  document.getElementById('geocerca-radio').style.display = activo ? 'inline-block' : 'none';
+  if(activo && window._ultimoClienteLatLon){
+    mostrarGeocerca(window._ultimoClienteLatLon.lat, window._ultimoClienteLatLon.lon, window._ultimoClienteLatLon.nombre);
+  } else {
+    limpiarGeocerca();
+  }
+}
+
+function actualizarGeocerca(){
+  if(window._ultimoClienteLatLon){
+    mostrarGeocerca(window._ultimoClienteLatLon.lat, window._ultimoClienteLatLon.lon, window._ultimoClienteLatLon.nombre);
+  }
+}
+
+function mostrarGeocerca(lat, lon, nombre){
+  limpiarGeocerca();
+  const radio = parseInt(document.getElementById('geocerca-radio').value) || 1000;
+  _geocercaCirculo = L.circle([lat, lon], {
+    radius: radio,
+    color: '#00d4aa',
+    fillColor: '#00d4aa',
+    fillOpacity: 0.1,
+    weight: 2,
+    dashArray: '6,6'
+  }).addTo(_mapa);
+  _geocercaCirculo.bindPopup('<b>Geocerca</b><br>'+nombre+'<br>Radio: '+(radio>=1000?(radio/1000)+' km':radio+' m'));
+}
+
+function limpiarGeocerca(){
+  if(_geocercaCirculo){
+    try{ _mapa.removeLayer(_geocercaCirculo); }catch(e){}
+    _geocercaCirculo = null;
+  }
 }
 
 // Agregar CSS para ocultar panel de instrucciones de Leaflet Routing
