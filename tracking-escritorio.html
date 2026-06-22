@@ -206,6 +206,7 @@ select.f-inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
     <div class="nav-item active" onclick="setView('dashboard',this)"><span class="nav-icon">📊</span>Dashboard</div>
     <div class="nav-item" onclick="setView('pedidos',this)"><span class="nav-icon">📦</span>Pedidos<span class="nav-badge" id="nb-alerta">2</span></div>
     <div class="nav-item" onclick="setView('kpi',this)"><span class="nav-icon">📈</span>KPIs</div>
+    <div class="nav-item" onclick="setView('cliente-dash',this)"><span class="nav-icon">📊</span>Dashboard Cliente</div>
 
     <div class="nav-section">Entregas</div>
     <div class="nav-item" onclick="filtrarNav('ruta',this)"><span class="nav-icon">🔄</span>En Ruta<span class="nav-badge green" id="nb-ruta">12</span></div>
@@ -292,6 +293,73 @@ select.f-inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
           <div style="font-size:56px;font-weight:800;font-family:var(--mono);color:var(--accent);line-height:1" id="kpi-otif-big">91%</div>
           <div style="font-size:12px;color:var(--muted);margin-top:6px">Meta: 95% · Δ –4 puntos</div>
         </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD CLIENTE -->
+    <div id="view-cliente-dash" style="display:none">
+      <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:18px;margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div class="f-label" style="margin-bottom:6px">Ver por</div>
+          <div style="display:flex;gap:6px">
+            <button id="cd-tab-cliente" class="mapa-tab active" onclick="cambiarTipoDash('client')" style="padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--accent);background:rgba(0,212,170,.08);color:var(--accent)">👤 Cliente final</button>
+            <button id="cd-tab-remitente" class="mapa-tab" onclick="cambiarTipoDash('remitente')" style="padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--bdr);background:rgba(255,255,255,.03);color:var(--muted)">🏢 Remitente</button>
+          </div>
+        </div>
+        <div style="flex:1;min-width:220px">
+          <div class="f-label" style="margin-bottom:6px">Seleccionar</div>
+          <select class="f-inp" id="cd-select" onchange="renderClienteDash()">
+            <option value="">— Selecciona —</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="cd-content" style="display:none">
+        <div class="kpi-strip" style="grid-template-columns:repeat(4,1fr)">
+          <div class="kpi-box">
+            <div class="kpi-box-label">OTIF</div>
+            <div class="kpi-box-val" id="cd-otif" style="color:var(--accent)">—</div>
+            <div class="kpi-box-sub" id="cd-otif-sub">—</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-box-label">Lead Time promedio</div>
+            <div class="kpi-box-val" id="cd-leadtime" style="color:var(--blue)">—</div>
+            <div class="kpi-box-sub">creación → entrega</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-box-label">Costo total</div>
+            <div class="kpi-box-val" id="cd-costo" style="color:var(--warn)">—</div>
+            <div class="kpi-box-sub" id="cd-costo-sub">—</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-box-label">Incidencias</div>
+            <div class="kpi-box-val" id="cd-incidencias" style="color:var(--danger)">—</div>
+            <div class="kpi-box-sub" id="cd-incidencias-sub">—</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-top:6px">
+          <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:20px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px">📈 Tendencia de pedidos</div>
+            <svg id="cd-chart" width="100%" viewBox="0 0 480 160"></svg>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:20px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px">Distribución de estados</div>
+            <div id="cd-dist"></div>
+          </div>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:20px;margin-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Detalle de pedidos</div>
+            <button onclick="exportarDashCliente()" style="padding:7px 14px;border-radius:7px;background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.3);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">📊 Exportar a Excel</button>
+          </div>
+          <div id="cd-tabla" style="overflow-x:auto"></div>
+        </div>
+      </div>
+
+      <div id="cd-empty" style="text-align:center;padding:60px 20px;color:var(--muted);font-size:13px">
+        Selecciona un cliente o remitente para ver su dashboard
       </div>
     </div>
 
@@ -559,7 +627,7 @@ let _modalLink='',_modalPedido=null;
 
 // VIEWS
 function setView(v,el){
-  ['dashboard','pedidos','kpi','qr','mapa','excel','historial'].forEach(x=>document.getElementById('view-'+x).style.display='none');
+  ['dashboard','pedidos','kpi','cliente-dash','qr','mapa','excel','historial'].forEach(x=>document.getElementById('view-'+x).style.display='none');
   document.getElementById('view-'+v).style.display='block';
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
@@ -568,10 +636,11 @@ function setView(v,el){
   if(v==='mapa'){populateMapaSelect();setTimeout(()=>{iniciarMapa();if(_mapa)_mapa.invalidateSize();},200);}
   if(v==='pedidos'){filtroActual='all';document.getElementById('filtro-header').innerHTML='';renderTabla('tabla-pedidos-wrap2');}
   if(v==='kpi')renderKPIDist();
+  if(v==='cliente-dash')populateClienteDashSelect();
 }
 function filtrarNav(f,el){
   filtroActual=f;
-  ['dashboard','pedidos','kpi','qr','excel','historial'].forEach(x=>document.getElementById('view-'+x).style.display='none');
+  ['dashboard','pedidos','kpi','cliente-dash','qr','excel','historial'].forEach(x=>document.getElementById('view-'+x).style.display='none');
   document.getElementById('view-pedidos').style.display='block';
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
@@ -706,6 +775,7 @@ function marcarEntregado(id){
   const o=orders.find(x=>x.id===id);if(!o||o.status==='entregado')return;
   if(counts[o.status]!==undefined&&counts[o.status]>0)counts[o.status]--;
   o.status='entregado';o.alert=false;o.eta='Entregado';
+  o.entregadoEn = Date.now();
   counts.entregado++;
   registrarHistorial('✅ Entregado', o.client+' ('+(o.remitente||'—')+') · '+o.doc, '#10b981');
   refreshAll();showToast('✅ '+o.client+' entregado');
@@ -764,6 +834,190 @@ function renderKPIDist(){
       </div>
     </div>`;
   }).join('');
+}
+
+// DASHBOARD CLIENTE/REMITENTE
+let _cdTipo = 'client'; // 'client' o 'remitente'
+
+function cambiarTipoDash(tipo){
+  _cdTipo = tipo;
+  const map = {
+    client: {sel:'cd-tab-cliente', other:'cd-tab-remitente'},
+    remitente: {sel:'cd-tab-remitente', other:'cd-tab-cliente'}
+  };
+  document.getElementById(map[tipo].sel).style.cssText='padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--accent);background:rgba(0,212,170,.08);color:var(--accent)';
+  document.getElementById(map[tipo].other).style.cssText='padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--bdr);background:rgba(255,255,255,.03);color:var(--muted)';
+  populateClienteDashSelect();
+  document.getElementById('cd-content').style.display='none';
+  document.getElementById('cd-empty').style.display='block';
+}
+
+function populateClienteDashSelect(){
+  const sel=document.getElementById('cd-select');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Selecciona —</option>';
+  const campo = _cdTipo==='client' ? 'client' : 'remitente';
+  const valores=[...new Set(orders.map(o=>o[campo]).filter(Boolean))].sort();
+  valores.forEach(v=>{
+    const cant=orders.filter(o=>o[campo]===v).length;
+    const opt=document.createElement('option');
+    opt.value=v;opt.textContent=v+' ('+cant+' pedidos)';
+    sel.appendChild(opt);
+  });
+  if(cur)sel.value=cur;
+}
+
+function calcularLeadTimeHoras(o){
+  if(!o.creadoEn||!o.entregadoEn) return null;
+  return (o.entregadoEn - o.creadoEn) / (1000*60*60);
+}
+
+function renderClienteDash(){
+  const valor=document.getElementById('cd-select').value;
+  if(!valor){
+    document.getElementById('cd-content').style.display='none';
+    document.getElementById('cd-empty').style.display='block';
+    return;
+  }
+  document.getElementById('cd-content').style.display='block';
+  document.getElementById('cd-empty').style.display='none';
+
+  const campo = _cdTipo==='client' ? 'client' : 'remitente';
+  const pedidos = orders.filter(o=>o[campo]===valor);
+  const total = pedidos.length;
+  const entregados = pedidos.filter(o=>o.status==='entregado').length;
+  const incidencias = pedidos.filter(o=>o.status==='incidencia').length;
+  const otif = total>0 ? Math.round((entregados/total)*100) : 0;
+
+  // Lead time
+  const leadTimes = pedidos.map(calcularLeadTimeHoras).filter(lt=>lt!==null);
+  const leadProm = leadTimes.length ? (leadTimes.reduce((a,b)=>a+b,0)/leadTimes.length) : null;
+  const leadStr = leadProm===null ? '—' : (leadProm<24 ? leadProm.toFixed(1)+'h' : (leadProm/24).toFixed(1)+'d');
+
+  // Costo
+  const costoTotal = pedidos.reduce((sum,o)=>sum+(o.costo||0),0);
+  const costoProm = total>0 ? Math.round(costoTotal/total) : 0;
+
+  document.getElementById('cd-otif').textContent = otif+'%';
+  document.getElementById('cd-otif-sub').textContent = entregados+' de '+total+' entregados';
+  document.getElementById('cd-otif').style.color = otif>=90 ? 'var(--success)' : otif>=70 ? 'var(--warn)' : 'var(--danger)';
+  document.getElementById('cd-leadtime').textContent = leadStr;
+  document.getElementById('cd-costo').textContent = '$'+costoTotal.toLocaleString('es-CL');
+  document.getElementById('cd-costo-sub').textContent = 'Promedio: $'+costoProm.toLocaleString('es-CL');
+  document.getElementById('cd-incidencias').textContent = incidencias;
+  document.getElementById('cd-incidencias-sub').textContent = total>0 ? Math.round((incidencias/total)*100)+'% del total' : '—';
+
+  // Distribución de estados
+  const distItems=[
+    {k:'entregado',label:'Entregado',color:'#10b981'},
+    {k:'ruta',label:'En Ruta',color:'#00d4aa'},
+    {k:'transito',label:'En Tránsito',color:'#60a5fa'},
+    {k:'pendiente',label:'Pendiente',color:'#f59e0b'},
+    {k:'incidencia',label:'Incidencia',color:'#ef4444'},
+    {k:'retirado',label:'Retirado',color:'#a78bfa'},
+  ];
+  document.getElementById('cd-dist').innerHTML=distItems.map(it=>{
+    const cant=pedidos.filter(o=>o.status===it.k).length;
+    const pct=total>0?Math.round(cant/total*100):0;
+    if(cant===0) return '';
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="color:${it.color};font-weight:600">${it.label}</span>
+        <span style="color:var(--muted);font-family:var(--mono)">${cant} (${pct}%)</span>
+      </div>
+      <div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden">
+        <div style="height:100%;background:${it.color};border-radius:3px;width:${pct}%;transition:width .6s"></div>
+      </div>
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:var(--muted);text-align:center;padding:14px">Sin datos</div>';
+
+  // Gráfico de tendencia (pedidos por día, últimos 7 días con datos)
+  renderClienteDashChart(pedidos);
+
+  // Tabla de detalle
+  renderClienteDashTabla(pedidos);
+
+  window._cdPedidosActuales = pedidos;
+  window._cdValorActual = valor;
+}
+
+function renderClienteDashChart(pedidos){
+  const svg=document.getElementById('cd-chart');
+  if(!svg) return;
+
+  // Agrupar por día (usando creadoEn, o "hoy" si no existe)
+  const porDia = {};
+  pedidos.forEach(o=>{
+    const fecha = o.creadoEn ? new Date(o.creadoEn) : new Date();
+    const key = fecha.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit'});
+    porDia[key] = (porDia[key]||0)+1;
+  });
+  const dias = Object.keys(porDia).slice(-7);
+  if(!dias.length){
+    svg.innerHTML = '<text x="240" y="80" text-anchor="middle" fill="#7c8aa3" font-size="11" font-family="Outfit">Sin datos suficientes</text>';
+    return;
+  }
+  const valores = dias.map(d=>porDia[d]);
+  const maxVal = Math.max(...valores,1);
+  const padX=30, padY=20, w=480-padX*2, h=160-padY*2-20;
+  const puntos = dias.map((d,i)=>{
+    const x = padX + (dias.length>1 ? (i/(dias.length-1))*w : w/2);
+    const y = padY + h - (valores[i]/maxVal)*h;
+    return {x,y,val:valores[i],label:d};
+  });
+  const polyline = puntos.map(p=>p.x+','+p.y).join(' ');
+  const circles = puntos.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="4" fill="#00d4aa"/>`).join('');
+  const labels = puntos.map(p=>`<text x="${p.x}" y="${padY+h+16}" text-anchor="middle" fill="#7c8aa3" font-size="9" font-family="Outfit">${p.label}</text>`).join('');
+  svg.innerHTML = `
+    <line x1="${padX}" y1="${padY+h}" x2="${480-padX}" y2="${padY+h}" stroke="#1e2a3a" stroke-width="0.5"/>
+    <polyline points="${polyline}" fill="none" stroke="#00d4aa" stroke-width="2.5" stroke-linejoin="round"/>
+    ${circles}
+    ${labels}`;
+}
+
+function renderClienteDashTabla(pedidos){
+  const cont=document.getElementById('cd-tabla');
+  if(!cont) return;
+  if(!pedidos.length){ cont.innerHTML='<div style="text-align:center;padding:20px;font-size:12px;color:var(--muted)">Sin pedidos</div>'; return; }
+  cont.innerHTML=`<table>
+    <thead><tr><th>Doc</th><th>Cliente</th><th>Ciudad</th><th>Estado</th><th>Lead Time</th><th>Costo</th></tr></thead>
+    <tbody>
+      ${pedidos.map(o=>{
+        const lt=calcularLeadTimeHoras(o);
+        const ltStr = lt===null ? '—' : (lt<24 ? lt.toFixed(1)+'h' : (lt/24).toFixed(1)+'d');
+        return `<tr>
+          <td><div class="td-id">${o.doc}</div></td>
+          <td><div class="td-client">${o.client}</div></td>
+          <td style="font-size:12px">${o.city}</td>
+          <td><span class="badge ${BC[o.status]}">${BL[o.status]}</span></td>
+          <td style="font-size:12px;font-family:var(--mono)">${ltStr}</td>
+          <td style="font-size:12px;font-family:var(--mono)">$${(o.costo||0).toLocaleString('es-CL')}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+}
+
+function exportarDashCliente(){
+  const pedidos=window._cdPedidosActuales;
+  const valor=window._cdValorActual;
+  if(!pedidos||!pedidos.length){showToast('⚠️ No hay datos para exportar');return;}
+  const rows=pedidos.map(o=>{
+    const lt=calcularLeadTimeHoras(o);
+    return {
+      Documento:o.doc,Cliente:o.client,Remitente:o.remitente,
+      Ciudad:o.city,Estado:BL[o.status],
+      LeadTimeHoras: lt===null?'':lt.toFixed(1),
+      Costo:o.costo||0,Conductor:o.driver
+    };
+  });
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Dashboard');
+  const fecha=new Date().toLocaleDateString('es-CL').replace(/\//g,'-');
+  XLSX.writeFile(wb,'dashboard-'+(valor||'cliente').replace(/[^a-z0-9]/gi,'-')+'-'+fecha+'.xlsx');
+  showToast('✅ Dashboard exportado');
 }
 
 // HISTORIAL
@@ -839,6 +1093,8 @@ function agregarPedido(){
     status:document.getElementById('f-status').value,
     costo:costo,
     rutaManual:rutaManual!=='auto'?rutaManual:null,
+    creadoEn: Date.now(),
+    entregadoEn: null,
     alert:false
   };
   orders.unshift(o);
@@ -1087,6 +1343,8 @@ function leerExcel(file){
           status:status,
           costo:parseFloat(r['Costo']||r['costo']||r['COSTO']||0)||0,
           rutaManual:normRuta(r['Ruta']||r['ruta']||r['RUTA']||r['RutaDespacho']||''),
+          creadoEn: Date.now(),
+          entregadoEn: status==='entregado' ? Date.now() : null,
           alert:status==='incidencia'||status==='pendiente'
         };
       }).filter(o=>o.client&&o.client!=='Sin nombre'||o.doc);
