@@ -1983,10 +1983,10 @@ function mostrarGeocerca(lat, lon, nombre){
   const radio = parseInt(document.getElementById('geocerca-radio').value) || 1000;
   _geocercaCirculo = L.circle([lat, lon], {
     radius: radio,
-    color: '#00d4aa',
-    fillColor: '#00d4aa',
-    fillOpacity: 0.1,
-    weight: 2,
+    color: '#ef4444',
+    fillColor: '#ef4444',
+    fillOpacity: 0.12,
+    weight: 2.5,
     dashArray: '6,6'
   }).addTo(_mapa);
   _geocercaCirculo.bindPopup('<b>Geocerca</b><br>'+nombre+'<br>Radio: '+(radio>=1000?(radio/1000)+' km':radio+' m'));
