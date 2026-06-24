@@ -407,6 +407,18 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
       <button class="obs-btn" id="obs-toggle" onclick="fToggleObs()">+ Agregar observación (opcional)</button>
       <div class="obs-area" id="obs-area"><textarea class="f-inp" id="inp-obs" rows="3" placeholder="Ej: Cliente no estaba, portería recibió..."></textarea></div>
 
+      <div id="foto-wrap" style="display:none;margin-bottom:6px">
+        <div class="f-sec-title" style="margin-top:0">📷 Foto del comprobante</div>
+        <input type="file" id="foto-input" accept="image/*" capture="environment" style="display:none" onchange="fFotoSeleccionada(this)"/>
+        <div id="foto-preview-wrap" style="display:none;margin-bottom:10px;position:relative">
+          <img id="foto-preview" style="width:100%;border-radius:12px;max-height:240px;object-fit:cover;display:block"/>
+          <button onclick="fQuitarFoto()" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer">✕</button>
+        </div>
+        <button id="foto-btn" onclick="document.getElementById('foto-input').click()" style="width:100%;background:rgba(0,212,170,.08);border:1.5px dashed rgba(0,212,170,.4);border-radius:12px;padding:16px;text-align:center;cursor:pointer;font-family:var(--font);color:var(--accent);font-size:13px;font-weight:600">
+          📷 Tomar foto de la entrega
+        </button>
+      </div>
+
       <button class="btn-enviar" onclick="fEnviar()"><span>Confirmar actualización</span> →</button>
     </div>
 
@@ -722,7 +734,42 @@ function fSelEstado(s,vibrate=true){
   const map={retirado:'sel-retirado',transito:'sel-transito',ruta:'sel-ruta',entregado:'sel-entregado',pendiente:'sel-pendiente',incidencia:'sel-incidencia'};
   document.getElementById('eb-'+s).classList.add('sel',map[s]);
   fEstado=s;
+  document.getElementById('foto-wrap').style.display = (s==='entregado') ? 'block' : 'none';
   if(vibrate&&navigator.vibrate)navigator.vibrate(30);
+}
+
+let fFotoBase64 = null;
+
+function fFotoSeleccionada(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    // Comprimir la imagen antes de guardar para no sobrecargar el link
+    const img = new Image();
+    img.onload = function(){
+      const maxAncho = 800;
+      let w = img.width, h = img.height;
+      if(w > maxAncho){ h = h * (maxAncho/w); w = maxAncho; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      fFotoBase64 = canvas.toDataURL('image/jpeg', 0.6);
+      document.getElementById('foto-preview').src = fFotoBase64;
+      document.getElementById('foto-preview-wrap').style.display = 'block';
+      document.getElementById('foto-btn').style.display = 'none';
+      if(navigator.vibrate) navigator.vibrate(40);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function fQuitarFoto(){
+  fFotoBase64 = null;
+  document.getElementById('foto-preview-wrap').style.display = 'none';
+  document.getElementById('foto-btn').style.display = 'block';
+  document.getElementById('foto-input').value = '';
 }
 
 function fSelEta(val){
@@ -738,7 +785,10 @@ function fToggleObs(){fObsVisible=!fObsVisible;document.getElementById('obs-area
 function fEnviar(){
   const obs=document.getElementById('inp-obs').value.trim();
   const eta=fEta||(fPedidoData&&fPedidoData.eta&&fPedidoData.eta!=='—'?fPedidoData.eta:null);
-  const result={...(fPedidoData||{}),status:fEstado,eta:eta||'—',obs:obs,alert:fEstado==='incidencia'||fEstado==='pendiente',updatedAt:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})};
+  if(fEstado==='entregado' && !fFotoBase64){
+    if(!confirm('No has tomado foto del comprobante. ¿Continuar sin foto?')) return;
+  }
+  const result={...(fPedidoData||{}),status:fEstado,eta:eta||'—',obs:obs,foto:fFotoBase64||null,alert:fEstado==='incidencia'||fEstado==='pendiente',updatedAt:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})};
   fResultData=result;
   const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(result))));
   const linkImport=getSelfURL()+'?import='+encoded;
@@ -752,6 +802,7 @@ function fEnviar(){
     <div style="font-size:12px;color:var(--muted)">Cliente: <span style="color:var(--text);font-weight:600">${result.client||'—'}</span></div>
     <div style="font-size:12px;color:var(--muted);margin-top:4px">ETA: <span style="color:var(--accent);font-weight:700">${result.eta}</span></div>
     ${obs?`<div style="font-size:12px;color:var(--muted);margin-top:4px">Obs: <span style="color:var(--text)">${obs}</span></div>`:''}
+    ${fFotoBase64?`<div style="margin-top:10px"><img src="${fFotoBase64}" style="width:100%;border-radius:10px;max-height:160px;object-fit:cover"/></div>`:''}
     <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--bdr)">
       <div style="font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Link para importar al tracking</div>
       <div onclick="copiar('${linkImport}','✅ Link copiado')" style="font-size:10px;font-family:var(--mono);color:var(--accent);background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:8px;padding:8px;word-break:break-all;line-height:1.5;cursor:pointer">${linkImport}</div>
@@ -774,6 +825,8 @@ function fReset(){
   document.getElementById('f-pantalla-ok').classList.remove('show');
   document.getElementById('f-pantalla-main').style.display='block';
   fEstado='ruta';fEta=null;
+  fQuitarFoto();
+  document.getElementById('foto-wrap').style.display='none';
   document.querySelectorAll('.estado-btn').forEach(el=>{el.classList.remove('sel');['sel-retirado','sel-transito','sel-ruta','sel-entregado','sel-pendiente','sel-incidencia'].forEach(c=>el.classList.remove(c));});
   document.getElementById('eb-ruta').classList.add('sel','sel-ruta');
   document.querySelectorAll('.eta-btn').forEach(el=>el.classList.remove('sel'));

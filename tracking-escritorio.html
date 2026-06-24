@@ -439,6 +439,14 @@ select.f-inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
           </div>
         </div>
       </div>
+
+      <div style="background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:20px;max-width:600px;margin-top:16px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px">📲 Recibir actualización del conductor</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">Pega aquí el link que te envía el conductor desde su celular para actualizar el estado, ETA, foto y observaciones del pedido.</div>
+        <textarea class="f-inp" id="conductor-link-input" rows="3" placeholder="Pega el link aquí..." style="font-family:var(--mono);font-size:11px;resize:vertical"></textarea>
+        <button onclick="importarActualizacionConductor()" style="width:100%;margin-top:10px;padding:11px;border-radius:8px;background:var(--accent);color:#0a0f1e;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">✅ Aplicar actualización</button>
+        <div id="conductor-import-result" style="display:none;margin-top:12px"></div>
+      </div>
     </div>
 
     <!-- EXCEL -->
@@ -599,6 +607,16 @@ select.f-inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
   </div>
 </div>
 
+<!-- MODAL FOTO COMPROBANTE -->
+<div class="modal-overlay" id="modal-foto">
+  <div class="modal-box" style="max-width:380px">
+    <button class="modal-close" onclick="document.getElementById('modal-foto').classList.remove('show')">✕</button>
+    <div class="modal-title" id="modal-foto-title">Comprobante de entrega</div>
+    <div class="modal-sub" id="modal-foto-sub"></div>
+    <img id="modal-foto-img" style="width:100%;border-radius:12px;margin-top:8px"/>
+  </div>
+</div>
+
 <!-- MODAL CONFIRM -->
 <div class="modal-overlay" id="modal-confirm">
   <div class="confirm-box">
@@ -695,6 +713,7 @@ function renderTabla(containerId){
                 <button class="act-btn act-qr" onclick="abrirModalQR('${o.id}')">QR</button>
                 <button class="act-btn" style="background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.3)" onclick="linkCliente('${o.id}')">🔗</button>
                 ${o.telefono?`<button class="act-btn act-wa" onclick="waRapido('${o.id}')">WA</button>`:''}
+                ${o.foto?`<button class="act-btn" style="background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.3)" onclick="verFotoComprobante('${o.id}')">📷 Foto</button>`:''}
                 <button class="act-btn act-edit" onclick="asignarConductor('${o.id}')">🚚 Conductor</button>
                 <button class="act-btn act-edit" onclick="asignarPatente('${o.id}')">🔑</button>
                 <button class="act-btn act-edit" onclick="asignarCosto('${o.id}')">💰</button>
@@ -1255,6 +1274,69 @@ function generarQRDesktop(){
 }
 function copiarLinkQRDesktop(){copiar(_modalLink,'✅ Link copiado');}
 function waQRDesktop(){if(_modalPedido)waModal();}
+
+function verFotoComprobante(id){
+  const o = orders.find(x=>x.id===id);
+  if(!o || !o.foto) return;
+  document.getElementById('modal-foto-title').textContent = o.client;
+  document.getElementById('modal-foto-sub').textContent = o.doc + ' · ' + (o.driver||'—');
+  document.getElementById('modal-foto-img').src = o.foto;
+  document.getElementById('modal-foto').classList.add('show');
+}
+
+// RECIBIR ACTUALIZACIÓN DEL CONDUCTOR
+function importarActualizacionConductor(){
+  const raw = document.getElementById('conductor-link-input').value.trim();
+  const result = document.getElementById('conductor-import-result');
+  if(!raw){ showToast('⚠️ Pega un link primero'); return; }
+
+  let encoded = raw;
+  if(raw.includes('?import=')) encoded = raw.split('?import=')[1];
+
+  try {
+    const json = decodeURIComponent(escape(atob(encoded)));
+    const datos = JSON.parse(json);
+
+    if(!datos.id && !datos.doc){
+      throw new Error('El link no contiene datos de un pedido válido');
+    }
+
+    // Buscar el pedido existente por id o doc
+    const o = orders.find(x => x.id === datos.id || x.doc === datos.doc || x.doc === datos.id);
+
+    if(!o){
+      result.style.cssText = 'display:block;margin-top:12px;padding:12px;border-radius:8px;font-size:12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:var(--danger)';
+      result.innerHTML = '❌ No se encontró el pedido <strong>'+(datos.doc||datos.id)+'</strong> en el sistema. Verifica que esté cargado.';
+      return;
+    }
+
+    // Aplicar cambios
+    const estadoAnterior = o.status;
+    if(counts[estadoAnterior] !== undefined && counts[estadoAnterior] > 0) counts[estadoAnterior]--;
+    o.status = datos.status || o.status;
+    o.eta = datos.eta || o.eta;
+    o.alert = datos.alert || false;
+    if(datos.obs) o.observacion = datos.obs;
+    if(datos.foto) o.foto = datos.foto;
+    if(o.status === 'entregado') o.entregadoEn = Date.now();
+    counts[o.status] = (counts[o.status]||0) + 1;
+
+    refreshAll();
+    document.getElementById('conductor-link-input').value = '';
+
+    const tieneFoto = datos.foto ? ' 📷 Con foto de comprobante.' : '';
+    result.style.cssText = 'display:block;margin-top:12px;padding:12px;border-radius:8px;font-size:12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);color:#10b981';
+    result.innerHTML = '✅ <strong>'+o.client+'</strong> actualizado a <strong>'+BL[o.status]+'</strong>.'+tieneFoto;
+
+    registrarHistorial('🚚 Actualización conductor', o.client+' · '+BL[o.status]+(datos.foto?' (con foto)':''), '#60a5fa');
+    showToast('✅ Pedido actualizado por el conductor');
+    setTimeout(()=>{ result.style.display='none'; }, 6000);
+
+  } catch(e) {
+    result.style.cssText = 'display:block;margin-top:12px;padding:12px;border-radius:8px;font-size:12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:var(--danger)';
+    result.textContent = '❌ Link inválido. Asegúrate de copiar el link completo que te envió el conductor.';
+  }
+}
 
 // CLEAR
 function confirmClear(){document.getElementById('modal-confirm').classList.add('show');}
