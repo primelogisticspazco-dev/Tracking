@@ -1586,6 +1586,32 @@ setInterval(()=>{
   }
 }, 300000);
 
+// LIMPIEZA AUTOMÁTICA de entregados con más de 24 horas
+const VEINTICUATRO_HORAS_MS = 24 * 60 * 60 * 1000;
+
+function limpiarEntregadosAntiguos(){
+  const ahora = Date.now();
+  let eliminados = 0;
+  for(let i = orders.length - 1; i >= 0; i--){
+    const o = orders[i];
+    if(o.status === 'entregado' && o.entregadoEn && (ahora - o.entregadoEn) > VEINTICUATRO_HORAS_MS){
+      orders.splice(i, 1);
+      if(counts.entregado > 0) counts.entregado--;
+      eliminados++;
+    }
+  }
+  if(eliminados > 0){
+    refreshAll();
+    registrarHistorial('🧹 Limpieza automática', eliminados+' pedido'+(eliminados!==1?'s':'')+' entregado'+(eliminados!==1?'s':'')+' (+24h) removido'+(eliminados!==1?'s':'')+' de la vista', '#8892a4');
+    showToast('🧹 '+eliminados+' pedido'+(eliminados!==1?'s':'')+' antiguo'+(eliminados!==1?'s':'')+' limpiado'+(eliminados!==1?'s':'')+' (ya respaldados)');
+  }
+}
+
+// Revisar cada 10 minutos
+setInterval(limpiarEntregadosAntiguos, 600000);
+// También revisar al cargar el sistema
+setTimeout(limpiarEntregadosAntiguos, 5000);
+
 // Informe automático a las 18:00
 let _informeEnviado = false;
 setInterval(()=>{
