@@ -1844,8 +1844,9 @@ async function trazarRutaManual(){
   const origen=determinarOrigenRuta(geocoded);
   const origenRuta = {lat:origen.lat,lon:origen.lon};
   const origenLabel = origen.label;
+  const esZonaSur = origen.label === 'Bodega Temuco';
 
-  const ordenOptimo=optimizarOrden(origenRuta, geocoded);
+  const ordenOptimo=optimizarOrden(origenRuta, geocoded, esZonaSur);
 
   if(_rutaControl){ try{_mapa.removeControl(_rutaControl);}catch(e){} _rutaControl=null; }
 
@@ -2000,7 +2001,33 @@ function geocodificar(addr,city){
 }
 
 // Optimización simple: nearest neighbor desde el punto de partida
-function optimizarOrden(origen, paradas){
+function optimizarOrden(origen, paradas, invertirDesdeOrigen){
+  // invertirDesdeOrigen=true: empieza por la parada MÁS LEJANA del origen,
+  // luego va encadenando por vecino más cercano (regresando hacia la bodega)
+  if(invertirDesdeOrigen){
+    const restantes=[...paradas];
+    // Encontrar la parada más lejana del origen para partir desde ahí
+    let idxMasLejano=0, distMax=-1;
+    restantes.forEach((p,i)=>{
+      const d=Math.pow(p.lat-origen.lat,2)+Math.pow(p.lon-origen.lon,2);
+      if(d>distMax){distMax=d;idxMasLejano=i;}
+    });
+    const primera=restantes.splice(idxMasLejano,1)[0];
+    const ordenadas=[primera];
+    let actual={lat:primera.lat,lon:primera.lon};
+    while(restantes.length){
+      let idxMasCercano=0, distMin=Infinity;
+      restantes.forEach((p,i)=>{
+        const d=Math.pow(p.lat-actual.lat,2)+Math.pow(p.lon-actual.lon,2);
+        if(d<distMin){distMin=d;idxMasCercano=i;}
+      });
+      const elegido=restantes.splice(idxMasCercano,1)[0];
+      ordenadas.push(elegido);
+      actual={lat:elegido.lat,lon:elegido.lon};
+    }
+    return ordenadas;
+  }
+  // Comportamiento normal: vecino más cercano desde el origen
   const restantes=[...paradas];
   const ordenadas=[];
   let actual=origen;
@@ -2037,9 +2064,10 @@ async function trazarHojaRuta(){
   const origen=determinarOrigenRuta(geocoded);
   const origenRuta = {lat:origen.lat,lon:origen.lon};
   const origenLabel = origen.label;
+  const esZonaSur = origen.label === 'Bodega Temuco';
 
-  // Optimizar orden con nearest neighbor
-  const ordenOptimo=optimizarOrden(origenRuta, geocoded);
+  // Optimizar orden: si es zona sur, empieza de la parada más lejana
+  const ordenOptimo=optimizarOrden(origenRuta, geocoded, esZonaSur);
 
   // Limpiar mapa anterior
   if(_rutaControl){ try{_mapa.removeControl(_rutaControl);}catch(e){} _rutaControl=null; }
