@@ -1828,20 +1828,37 @@ function actualizarContadorManual(){
   if(el) el.textContent=_seleccionManual.size+' pedido'+(_seleccionManual.size!==1?'s':'')+' seleccionado'+(_seleccionManual.size!==1?'s':'');
 }
 
+// Agrupa pedidos con la misma dirección+ciudad en una sola "parada" con múltiples pedidos
+function agruparPorDireccion(pedidos){
+  const grupos = {};
+  pedidos.forEach(o=>{
+    const key = (o.addr||'').trim().toLowerCase()+'|'+(o.city||'').trim().toLowerCase();
+    if(!grupos[key]) grupos[key] = [];
+    grupos[key].push(o);
+  });
+  return Object.values(grupos).map(lista=>({
+    addr: lista[0].addr,
+    city: lista[0].city,
+    pedidos: lista // todos los pedidos que caen en esta misma parada
+  }));
+}
+
 async function trazarRutaManual(){
   if(!_seleccionManual.size){ showToast('⚠️ Selecciona al menos un pedido'); return; }
   const pedidos=orders.filter(o=>_seleccionManual.has(o.id));
 
-  showToast('🔄 Calculando ruta óptima de '+pedidos.length+' paradas...');
+  showToast('🔄 Calculando ruta óptima de '+pedidos.length+' pedidos...');
+
+  const grupos = agruparPorDireccion(pedidos);
 
   const geocoded=[];
-  for(const o of pedidos){
-    const coords=await geocodificar(o.addr,o.city);
-    if(coords) geocoded.push({...coords,pedido:o});
+  for(const g of grupos){
+    const coords=await geocodificar(g.addr,g.city);
+    if(coords) geocoded.push({...coords,parada:g});
   }
   if(!geocoded.length){ showToast('⚠️ No se pudieron ubicar las direcciones'); return; }
 
-  const origen=determinarOrigenRuta(geocoded);
+  const origen=determinarOrigenRuta(geocoded.map(g=>({pedido:g.parada.pedidos[0]})));
   const origenRuta = {lat:origen.lat,lon:origen.lon};
   const origenLabel = origen.label;
   const esZonaSur = origen.label === 'Bodega Temuco';
@@ -1868,8 +1885,9 @@ async function trazarRutaManual(){
         html:`<div style="background:#00d4aa;width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#0a0f1e">${i}</div>`,
         iconSize:[30,30],iconAnchor:[15,15],className:''
       });
-      const pedido=ordenOptimo[i-1].pedido;
-      return L.marker(wp.latLng,{icon:numeroIcon}).bindPopup('<b>Parada '+i+': '+pedido.client+'</b><br>'+pedido.addr+', '+pedido.city);
+      const parada=ordenOptimo[i-1].parada;
+      const nombresPedidos = parada.pedidos.map(p=>p.client+' ('+p.doc+')').join('<br>');
+      return L.marker(wp.latLng,{icon:numeroIcon}).bindPopup('<b>Parada '+i+'</b>'+(parada.pedidos.length>1?' · '+parada.pedidos.length+' pedidos':'')+'<br>'+nombresPedidos+'<br><span style="opacity:.7">'+parada.addr+', '+parada.city+'</span>');
     },
     containerClassName:'leaflet-routing-container-hidden'
   }).addTo(_mapa);
@@ -1880,14 +1898,17 @@ async function trazarRutaManual(){
     const mins=Math.round(ruta.summary.totalTime/60);
     const horas=Math.floor(mins/60), minRest=mins%60;
     const tiempoStr=horas>0?horas+'h '+minRest+'min':mins+'min';
+    const totalPedidos = ordenOptimo.reduce((sum,p)=>sum+p.parada.pedidos.length,0);
 
     const listaParadas=ordenOptimo.map((p,i)=>{
-      const o=p.pedido;
+      const parada=p.parada;
+      const clientesHTML = parada.pedidos.map(o=>'<div style="font-size:10px;color:var(--muted)">'+o.client+' · '+o.doc+'</div>').join('');
       return `<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr)">
         <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#0a0f1e;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:11px;font-weight:700;white-space:normal">${o.client}</div>
-          <div style="font-size:10px;color:var(--muted)">${o.city} · ${o.doc}</div>
+          <div style="font-size:11px;font-weight:700;white-space:normal">${parada.addr}${parada.pedidos.length>1?' <span style="color:var(--purple)">('+parada.pedidos.length+' pedidos)</span>':''}</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${parada.city}</div>
+          ${clientesHTML}
         </div>
       </div>`;
     }).join('');
@@ -1895,7 +1916,7 @@ async function trazarRutaManual(){
     document.getElementById('mapa-detalle').innerHTML=`
       <div style="margin-bottom:10px;padding:10px;background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:8px">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Ruta personalizada</div>
-        <div style="font-size:13px;font-weight:700">${ordenOptimo.length} paradas seleccionadas</div>
+        <div style="font-size:13px;font-weight:700">${ordenOptimo.length} parada${ordenOptimo.length!==1?'s':''} · ${totalPedidos} pedido${totalPedidos!==1?'s':''}</div>
       </div>
       <div style="padding:10px;background:var(--card);border-radius:8px;margin-bottom:12px">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px">
@@ -1922,9 +1943,11 @@ async function trazarRutaManual(){
 function exportarHojaRutaManual(){
   const orden=window._ultimaRutaManual;
   if(!orden||!orden.length)return;
-  const rows=orden.map((p,i)=>{
-    const o=p.pedido;
-    return {Orden:i+1,Documento:o.doc,Cliente:o.client,Direccion:o.addr,Ciudad:o.city,Telefono:o.telefono||'',ETA:o.eta,Estado:BL[o.status]};
+  const rows=[];
+  orden.forEach((p,i)=>{
+    p.parada.pedidos.forEach(o=>{
+      rows.push({Orden:i+1,Documento:o.doc,Cliente:o.client,Direccion:o.addr,Ciudad:o.city,Telefono:o.telefono||'',ETA:o.eta,Estado:BL[o.status]});
+    });
   });
   const ws=XLSX.utils.json_to_sheet(rows);
   const wb=XLSX.utils.book_new();
@@ -2050,18 +2073,20 @@ async function trazarHojaRuta(){
   const pedidos=orders.filter(o=>o.driver===conductor&&o.status!=='entregado');
   if(!pedidos.length){ showToast('⚠️ Sin pedidos pendientes para este conductor'); return; }
 
-  showToast('🔄 Calculando ruta óptima de '+pedidos.length+' paradas...');
+  showToast('🔄 Calculando ruta óptima de '+pedidos.length+' pedidos...');
 
-  // Geocodificar todas las direcciones
+  const grupos = agruparPorDireccion(pedidos);
+
+  // Geocodificar todas las direcciones (una por parada agrupada)
   const geocoded=[];
-  for(const o of pedidos){
-    const coords=await geocodificar(o.addr,o.city);
-    if(coords) geocoded.push({...coords,pedido:o});
+  for(const g of grupos){
+    const coords=await geocodificar(g.addr,g.city);
+    if(coords) geocoded.push({...coords,parada:g});
   }
   if(!geocoded.length){ showToast('⚠️ No se pudieron ubicar las direcciones'); return; }
 
   // Determinar punto de partida según zona predominante
-  const origen=determinarOrigenRuta(geocoded);
+  const origen=determinarOrigenRuta(geocoded.map(g=>({pedido:g.parada.pedidos[0]})));
   const origenRuta = {lat:origen.lat,lon:origen.lon};
   const origenLabel = origen.label;
   const esZonaSur = origen.label === 'Bodega Temuco';
@@ -2091,8 +2116,9 @@ async function trazarHojaRuta(){
         html:`<div style="background:#00d4aa;width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#0a0f1e">${i}</div>`,
         iconSize:[30,30],iconAnchor:[15,15],className:''
       });
-      const pedido=ordenOptimo[i-1].pedido;
-      return L.marker(wp.latLng,{icon:numeroIcon}).bindPopup('<b>Parada '+i+': '+pedido.client+'</b><br>'+pedido.addr+', '+pedido.city);
+      const parada=ordenOptimo[i-1].parada;
+      const nombresPedidos = parada.pedidos.map(p=>p.client+' ('+p.doc+')').join('<br>');
+      return L.marker(wp.latLng,{icon:numeroIcon}).bindPopup('<b>Parada '+i+'</b>'+(parada.pedidos.length>1?' · '+parada.pedidos.length+' pedidos':'')+'<br>'+nombresPedidos+'<br><span style="opacity:.7">'+parada.addr+', '+parada.city+'</span>');
     },
     containerClassName:'leaflet-routing-container-hidden'
   }).addTo(_mapa);
@@ -2103,14 +2129,17 @@ async function trazarHojaRuta(){
     const mins=Math.round(ruta.summary.totalTime/60);
     const horas=Math.floor(mins/60), minRest=mins%60;
     const tiempoStr=horas>0?horas+'h '+minRest+'min':mins+'min';
+    const totalPedidos = ordenOptimo.reduce((sum,p)=>sum+p.parada.pedidos.length,0);
 
     const listaParadas=ordenOptimo.map((p,i)=>{
-      const o=p.pedido;
+      const parada=p.parada;
+      const clientesHTML = parada.pedidos.map(o=>'<div style="font-size:10px;color:var(--muted)">'+o.client+' · '+o.doc+'</div>').join('');
       return `<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr)">
         <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#0a0f1e;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:11px;font-weight:700;white-space:normal">${o.client}</div>
-          <div style="font-size:10px;color:var(--muted)">${o.city} · ${o.doc}</div>
+          <div style="font-size:11px;font-weight:700;white-space:normal">${parada.addr}${parada.pedidos.length>1?' <span style="color:var(--purple)">('+parada.pedidos.length+' pedidos)</span>':''}</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${parada.city}</div>
+          ${clientesHTML}
         </div>
       </div>`;
     }).join('');
@@ -2119,7 +2148,7 @@ async function trazarHojaRuta(){
       <div style="margin-bottom:10px;padding:10px;background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:8px">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Conductor</div>
         <div style="font-size:13px;font-weight:700">${conductor}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px">${ordenOptimo.length} paradas optimizadas</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${ordenOptimo.length} parada${ordenOptimo.length!==1?'s':''} · ${totalPedidos} pedido${totalPedidos!==1?'s':''}</div>
       </div>
       <div style="padding:10px;background:var(--card);border-radius:8px;margin-bottom:12px">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px">
