@@ -1831,7 +1831,7 @@ function actualizarContadorManual(){
 
 // Separa visualmente marcadores que están muy cerca entre sí (evita superposición de números)
 function separarMarcadoresCercanos(ordenOptimo){
-  const UMBRAL = 0.0015; // ~150m aprox, ajustable
+  const UMBRAL = 0.01; // ~1 km aprox — agrupa ciudades que se ven juntas en el mapa con zoom alejado
   const ajustadas = ordenOptimo.map(p => ({...p, latAjustado: p.lat, lonAjustado: p.lon}));
   for(let i = 0; i < ajustadas.length; i++){
     let colisiones = 0;
@@ -1844,9 +1844,9 @@ function separarMarcadoresCercanos(ordenOptimo){
       }
     }
     if(colisiones > 0){
-      // Distribuir en círculo alrededor del punto original según cuántas colisiones lleva
-      const angulo = (colisiones * 60) * (Math.PI/180); // 60° entre cada uno
-      const radio = UMBRAL * 1.3;
+      // Distribuir en círculo alrededor del punto original, expandiendo el radio según cuántas colisiones
+      const angulo = (colisiones * 51.4) * (Math.PI/180); // ~360/7, evita repetir el mismo ángulo
+      const radio = UMBRAL * (1 + Math.floor((colisiones-1)/7)*0.8) * 1.6;
       ajustadas[i].latAjustado = ajustadas[i].lat + Math.sin(angulo) * radio;
       ajustadas[i].lonAjustado = ajustadas[i].lon + Math.cos(angulo) * radio;
     }
