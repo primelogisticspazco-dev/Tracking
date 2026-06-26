@@ -1425,7 +1425,7 @@ function leerExcel(file){
           status:status,
           costo:parseFloat(r['Costo']||r['costo']||r['COSTO']||0)||0,
           rutaManual:normRuta(r['Ruta']||r['ruta']||r['RUTA']||r['RutaDespacho']||''),
-          creadoEn: Date.now(),
+          creadoEn: parsearFechaExcel(r['Fecha']||r['fecha']||r['FECHA']||r['FechaCreacion']||r['Fecha Creacion']||''),
           entregadoEn: status==='entregado' ? Date.now() : null,
           alert:status==='incidencia'||status==='pendiente'
         };
@@ -1448,6 +1448,34 @@ function normRuta(s){
   if(c.includes('concep')) return 'concepcion';
   if(c.includes('directo')) return 'directo';
   return null; // automático
+}
+
+// Convierte la fecha del Excel (texto DD-MM-YYYY, DD/MM/YYYY, o número serial de Excel) a timestamp
+function parsearFechaExcel(valor){
+  if(!valor) return Date.now();
+  // Si Excel lo entrega como número serial de fecha
+  if(typeof valor === 'number'){
+    const fechaBase = new Date(1899, 11, 30); // época de Excel
+    return fechaBase.getTime() + valor * 24*60*60*1000;
+  }
+  const texto = valor.toString().trim();
+  if(!texto) return Date.now();
+  // Formatos DD-MM-YYYY o DD/MM/YYYY
+  let m = texto.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){
+    let [_, d, mo, y] = m;
+    if(y.length===2) y = '20'+y;
+    const fecha = new Date(parseInt(y), parseInt(mo)-1, parseInt(d), 9, 0, 0); // 9am por defecto
+    if(!isNaN(fecha.getTime())) return fecha.getTime();
+  }
+  // Formato YYYY-MM-DD (ISO)
+  m = texto.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(m){
+    const fecha = new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]), 9, 0, 0);
+    if(!isNaN(fecha.getTime())) return fecha.getTime();
+  }
+  // Si no se pudo parsear, usar fecha actual
+  return Date.now();
 }
 
 function mostrarPreviewExcel(pedidos){
@@ -1499,11 +1527,11 @@ function mostrarResultado(id,msg,type){
 
 function descargarPlantilla(){
   const ws=XLSX.utils.aoa_to_sheet([
-    ['Remitente','Cliente','Telefono','Direccion','Ciudad','Region','Documento','Conductor','Patente','ETA','Estado','Costo','Ruta'],
-    ['Bodega Central','Comercial Fuentes Ltda.','+56912340001','Av. Grecia 2800','Ñuñoa','RM','GD-0001','Carlos Vera','RVTK-32','13:30','ruta',15000,''],
-    ['Bodega Central','Ferretería Del Sur','+56912340002','San Martín 450','Temuco','Araucanía','GD-0002','Mario Soto','BNJK-91','10:30','transito',45000,'temuco'],
-    ['Bodega Central','Cliente Concepción','+56912340003','Av. O Higgins 500','Concepción','Biobío','GD-0003','Luis Rojas','XYZA-12','11:00','ruta',38000,'directo'],
-    ['Bodega Central','Cliente Talcahuano','+56912340004','Colon 800','Talcahuano','Biobío','GD-0004','Luis Rojas','XYZA-12','11:30','ruta',38000,'concepcion'],
+    ['Remitente','Cliente','Telefono','Direccion','Ciudad','Region','Documento','Conductor','Patente','ETA','Estado','Costo','Ruta','Fecha'],
+    ['Bodega Central','Comercial Fuentes Ltda.','+56912340001','Av. Grecia 2800','Ñuñoa','RM','GD-0001','Carlos Vera','RVTK-32','13:30','ruta',15000,'','25-06-2026'],
+    ['Bodega Central','Ferretería Del Sur','+56912340002','San Martín 450','Temuco','Araucanía','GD-0002','Mario Soto','BNJK-91','10:30','transito',45000,'temuco','25-06-2026'],
+    ['Bodega Central','Cliente Concepción','+56912340003','Av. O Higgins 500','Concepción','Biobío','GD-0003','Luis Rojas','XYZA-12','11:00','ruta',38000,'directo','25-06-2026'],
+    ['Bodega Central','Cliente Talcahuano','+56912340004','Colon 800','Talcahuano','Biobío','GD-0004','Luis Rojas','XYZA-12','11:30','ruta',38000,'concepcion','25-06-2026'],
   ]);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Pedidos');
