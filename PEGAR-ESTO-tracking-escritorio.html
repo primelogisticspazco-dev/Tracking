@@ -193,6 +193,8 @@ select.f-inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
     <span class="live-badge"><span class="live-dot"></span>En vivo</span>
     <div class="topbar-right">
       <span class="time-badge" id="top-time"></span>
+      <button id="btn-sync-cargar" class="btn-top" style="background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3)" onclick="cargarDesdeNube()">☁️ Cargar de nube</button>
+      <button id="btn-sync" class="btn-top" style="background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3)" onclick="sincronizarConNube()">☁️ Sincronizar</button>
       <button class="btn-top" style="background:rgba(0,212,170,.15);color:var(--accent);border:1px solid rgba(0,212,170,.3)" onclick="guardarTodo()">💾 Guardar</button>
       <button class="btn-top" style="background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3)" onclick="compartirLinkCliente()">🔗 Link cliente</button>
       <button class="btn-top btn-wa-top" onclick="sendWA()">📲 Resumen WA</button>
@@ -2573,6 +2575,73 @@ function cargarLocal(){
 
 // Auto guardar en localStorage cada 30 segundos
 setInterval(guardarLocal, 30000);
+
+// SINCRONIZACIÓN CON GOOGLE SHEETS (base de datos compartida)
+const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbw8T6qkkshPi_PWKvOBSfAK1IAZEs5No4E2HSlysqbznKHHZVC4MP9Q88aZvqoXwIYl/exec';
+let _sincronizando = false;
+
+async function sincronizarConNube(){
+  if(_sincronizando) return;
+  _sincronizando = true;
+  const btn = document.getElementById('btn-sync');
+  if(btn) btn.textContent = '🔄 Sincronizando...';
+  try{
+    const datos = encodeURIComponent(JSON.stringify(orders));
+    const url = SHEETS_API_URL + '?accion=guardar&datos=' + datos;
+    const resp = await fetch(url);
+    const json = await resp.json();
+    if(json.ok){
+      showToast('✅ Sincronizado: '+json.guardados+' pedidos en la nube');
+    } else {
+      showToast('⚠️ Error al sincronizar: '+(json.error||'desconocido'));
+    }
+  }catch(e){
+    showToast('⚠️ No se pudo conectar con Google Sheets');
+    console.error(e);
+  }
+  if(btn) btn.textContent = '☁️ Sincronizar';
+  _sincronizando = false;
+}
+
+async function cargarDesdeNube(){
+  const btn = document.getElementById('btn-sync-cargar');
+  if(btn) btn.textContent = '🔄 Cargando...';
+  try{
+    const url = SHEETS_API_URL + '?accion=leer';
+    const resp = await fetch(url);
+    const json = await resp.json();
+    if(json.pedidos){
+      let nuevos = 0, actualizados = 0;
+      json.pedidos.forEach(p => {
+        const existente = orders.find(o => o.id === p.id || o.doc === p.doc);
+        if(existente){
+          // Actualizar datos del pedido existente
+          Object.assign(existente, p);
+          actualizados++;
+        } else {
+          orders.push(p);
+          nuevos++;
+        }
+      });
+      // Recalcular counts
+      Object.keys(counts).forEach(k => counts[k] = 0);
+      orders.forEach(o => { if(counts[o.status] !== undefined) counts[o.status]++; });
+      refreshAll();
+      showToast('✅ '+nuevos+' nuevos, '+actualizados+' actualizados desde la nube');
+    } else {
+      showToast('⚠️ Sin datos en la nube todavía');
+    }
+  }catch(e){
+    showToast('⚠️ No se pudo conectar con Google Sheets');
+    console.error(e);
+  }
+  if(btn) btn.textContent = '☁️ Cargar de nube';
+}
+
+// Sincronizar automáticamente cada 2 minutos si hay pedidos
+setInterval(()=>{
+  if(orders.length > 0) sincronizarConNube();
+}, 120000);
 
 // Guardar al cerrar
 window.addEventListener('beforeunload',function(e){
