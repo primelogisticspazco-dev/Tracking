@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cotizador de Fletes — Sur de Chile | Prime Logistic Spa</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --dk:#0a0f1e;--card:#111827;--card2:#161f30;
+  --bdr:rgba(255,255,255,0.07);--bdr2:rgba(255,255,255,0.14);
+  --accent:#00d4aa;--accent-dim:rgba(0,212,170,.12);
+  --warn:#f59e0b;--danger:#ef4444;--blue:#60a5fa;--purple:#a78bfa;
+  --text:#f0f4f8;--muted:#8892a4;--muted2:#5a6578;
+  --font:'Outfit',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+html,body{background:var(--dk);color:var(--text);font-family:var(--font);min-height:100vh}
+body{padding:32px 20px 60px}
+.wrap{max-width:1080px;margin:0 auto}
+
+/* HEADER */
+.header{text-align:center;margin-bottom:36px}
+.eyebrow{display:inline-flex;align-items:center;gap:7px;background:var(--accent-dim);border:1px solid rgba(0,212,170,.3);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:700;letter-spacing:1.8px;color:var(--accent);text-transform:uppercase;margin-bottom:16px}
+.eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+h1{font-size:clamp(28px,4vw,42px);font-weight:800;letter-spacing:-0.5px;margin-bottom:10px}
+.sub{color:var(--muted);font-size:14px;max-width:520px;margin:0 auto;line-height:1.6}
+
+/* LAYOUT */
+.grid{display:grid;grid-template-columns:1fr 1.15fr;gap:20px;margin-bottom:24px}
+@media(max-width:860px){.grid{grid-template-columns:1fr}}
+
+.card{background:var(--card);border:1px solid var(--bdr);border-radius:18px;padding:26px}
+.card-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+
+/* TABS */
+.tabs{display:flex;gap:6px;margin-bottom:22px;background:rgba(255,255,255,.03);border-radius:12px;padding:4px}
+.tab{flex:1;padding:10px;border-radius:9px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);transition:all .2s}
+.tab.active{background:var(--accent);color:#04130f}
+
+/* FORM */
+.f-group{margin-bottom:18px}
+.f-label{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.4px;margin-bottom:8px;display:block;text-transform:uppercase}
+.f-inp{background:rgba(255,255,255,.04);border:1.5px solid var(--bdr2);border-radius:11px;padding:13px 14px;font-size:15px;color:var(--text);font-family:var(--mono);outline:none;width:100%;transition:border-color .2s}
+.f-inp:focus{border-color:var(--accent)}
+select.f-inp{appearance:none;font-family:var(--font);font-size:14px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238892a4' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;padding-right:36px;cursor:pointer}
+.hint{font-size:11px;color:var(--muted2);margin-top:7px;line-height:1.5}
+
+.stepper{display:flex;align-items:center;gap:10px}
+.step-btn{width:42px;height:42px;border-radius:11px;background:rgba(255,255,255,.04);border:1.5px solid var(--bdr2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .15s;flex-shrink:0}
+.step-btn:hover{border-color:var(--accent);color:var(--accent)}
+.step-btn:active{transform:scale(.92)}
+
+/* RESULTADO */
+.result-card{background:linear-gradient(160deg,var(--card),var(--card2));border:1px solid rgba(0,212,170,.28);border-radius:18px;padding:28px;position:relative;overflow:hidden}
+.result-glow{position:absolute;top:-60%;right:-20%;width:280px;height:280px;background:var(--accent);border-radius:50%;filter:blur(90px);opacity:.12;pointer-events:none}
+.result-label{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:6px;position:relative}
+.result-dest{font-size:15px;color:var(--muted);margin-bottom:18px;position:relative}
+.result-total{font-size:44px;font-weight:900;font-family:var(--mono);letter-spacing:-1px;line-height:1;margin-bottom:22px;position:relative}
+.result-total span{font-size:20px;color:var(--muted);font-weight:600;margin-right:6px}
+
+.breakdown{position:relative;border-top:1px solid var(--bdr);padding-top:18px}
+.bd-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:13px}
+.bd-row .lbl{color:var(--muted)}
+.bd-row .val{font-family:var(--mono);font-weight:600}
+.bd-row.recargo .val{color:var(--warn)}
+.bd-row.final{border-top:1px solid var(--bdr);margin-top:6px;padding-top:14px}
+.bd-row.final .lbl{font-size:14px;font-weight:700;color:var(--text)}
+.bd-row.final .val{font-size:18px;color:var(--accent);font-weight:800}
+
+.distance-bar{margin-top:18px;position:relative}
+.distance-bar-track{height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;margin-bottom:8px}
+.distance-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--warn));border-radius:3px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.distance-bar-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted2);font-family:var(--mono)}
+
+/* TABLA COMPARATIVA */
+.compare-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:16px}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;border-bottom:1px solid var(--bdr)}
+th:not(:first-child),td:not(:first-child){text-align:right}
+td{padding:11px 12px;font-size:13px;border-bottom:1px solid var(--bdr)}
+tr:last-child td{border-bottom:none}
+tr.active-row td{background:rgba(0,212,170,.06)}
+tr.active-row td:first-child{border-left:2px solid var(--accent);padding-left:10px}
+.city-name{font-weight:600}
+.km-val{color:var(--muted);font-family:var(--mono);font-size:12px}
+.recargo-val{color:var(--warn);font-family:var(--mono);font-size:12px}
+.price-val{font-family:var(--mono);font-weight:700;color:var(--accent)}
+
+.footnote{margin-top:24px;padding:16px 18px;background:rgba(255,255,255,.02);border:1px solid var(--bdr);border-radius:12px;font-size:11.5px;color:var(--muted);line-height:1.7}
+.footnote b{color:var(--text)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="eyebrow"><span class="eyebrow-dot"></span>Prime Logistic Spa</div>
+    <h1>Cotizador de Fletes</h1>
+    <div class="sub">Tarifas para el sur de Chile — calculadas por peso o volumen, con recargo automático según distancia de destino.</div>
+  </div>
+
+  <div class="grid">
+    <!-- FORMULARIO -->
+    <div class="card">
+      <div class="card-title">📦 Datos del envío</div>
+
+      <div class="tabs">
+        <button class="tab active" id="tab-kg" onclick="cambiarModo('kg')">Por Kilo</button>
+        <button class="tab" id="tab-m3" onclick="cambiarModo('m3')">Por M³</button>
+      </div>
+
+      <div class="f-group" id="grupo-kg">
+        <label class="f-label">Peso del envío (kg)</label>
+        <div class="stepper">
+          <button class="step-btn" onclick="ajustarValor(-1)">−</button>
+          <input class="f-inp" id="inp-kg" type="number" value="20" min="1" step="1" oninput="calcular()" style="text-align:center"/>
+          <button class="step-btn" onclick="ajustarValor(1)">+</button>
+        </div>
+        <div class="hint" id="hint-kg">Tarifa base cubre hasta 20 kg. Sobre ese peso se prorratea proporcionalmente.</div>
+      </div>
+
+      <div class="f-group" id="grupo-m3" style="display:none">
+        <label class="f-label">Volumen del envío (m³)</label>
+        <div class="stepper">
+          <button class="step-btn" onclick="ajustarValor(-1)">−</button>
+          <input class="f-inp" id="inp-m3" type="number" value="1" min="0.1" step="0.1" oninput="calcular()" style="text-align:center"/>
+          <button class="step-btn" onclick="ajustarValor(1)">+</button>
+        </div>
+        <div class="hint">Tarifa cobrada por metro cúbico completo o fracción.</div>
+      </div>
+
+      <div class="f-group">
+        <label class="f-label">Ciudad de destino</label>
+        <select class="f-inp" id="sel-ciudad" onchange="calcular()">
+          <option value="0">Concepción</option>
+          <option value="1">Temuco</option>
+          <option value="2">Villarrica</option>
+          <option value="3">Pucón</option>
+          <option value="4">Valdivia</option>
+          <option value="5">Osorno</option>
+          <option value="6">Puerto Varas</option>
+          <option value="7">Puerto Montt</option>
+        </select>
+        <div class="hint" id="hint-km"></div>
+      </div>
+    </div>
+
+    <!-- RESULTADO -->
+    <div class="result-card">
+      <div class="result-glow"></div>
+      <div class="result-label" id="result-label">Total estimado</div>
+      <div class="result-dest" id="result-dest">Santiago → Concepción</div>
+      <div class="result-total"><span>$</span><span id="result-num">0</span></div>
+
+      <div class="breakdown">
+        <div class="bd-row">
+          <span class="lbl">Tarifa base</span>
+          <span class="val" id="bd-base">$0</span>
+        </div>
+        <div class="bd-row" id="bd-extra-row" style="display:none">
+          <span class="lbl" id="bd-extra-lbl">Peso adicional</span>
+          <span class="val" id="bd-extra">$0</span>
+        </div>
+        <div class="bd-row recargo">
+          <span class="lbl">Recargo por distancia (<span id="bd-recargo-pct">0%</span>)</span>
+          <span class="val" id="bd-recargo">+$0</span>
+        </div>
+        <div class="bd-row final">
+          <span class="lbl">Total a cobrar</span>
+          <span class="val" id="bd-total">$0</span>
+        </div>
+      </div>
+
+      <div class="distance-bar">
+        <div class="distance-bar-track"><div class="distance-bar-fill" id="dist-fill" style="width:0%"></div></div>
+        <div class="distance-bar-labels">
+          <span>Santiago</span>
+          <span id="dist-km-label">0 km</span>
+          <span>Pto. Montt</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA COMPARATIVA -->
+  <div class="card">
+    <div class="compare-title">🗺️ Comparativo por ciudad</div>
+    <table>
+      <thead>
+        <tr><th>Ciudad</th><th>Distancia</th><th>Recargo</th><th>Precio final</th></tr>
+      </thead>
+      <tbody id="tabla-comparativa"></tbody>
+    </table>
+  </div>
+
+  <div class="footnote">
+    <b>Cómo se calcula:</b> tarifa base de $18.523 (0–20 kg) o $42.153 por m³, más un recargo de <b>2% cada 100 km</b> de distancia real por carretera desde Santiago (bodega Pudahuel) hasta el destino. Para cargas sobre 20 kg, el excedente se cobra proporcional a la tarifa base ($926/kg adicional aprox.). Valores netos, referenciales — sujetos a confirmación según condiciones de despacho.
+  </div>
+
+</div>
+
+<script>
+const CIUDADES = [
+  {nombre:'Concepción', km:500},
+  {nombre:'Temuco', km:675},
+  {nombre:'Villarrica', km:750},
+  {nombre:'Pucón', km:780},
+  {nombre:'Valdivia', km:840},
+  {nombre:'Osorno', km:920},
+  {nombre:'Puerto Varas', km:995},
+  {nombre:'Puerto Montt', km:1020},
+];
+const BASE_KG = 18523;
+const BASE_M3 = 42153;
+const RECARGO_PCT_POR_100KM = 2; // 2% cada 100km
+const KM_MAX_REF = 1020; // Puerto Montt, para la barra visual
+
+let modo = 'kg';
+
+function fmt(n){
+  return Math.round(n).toLocaleString('es-CL');
+}
+
+function cambiarModo(m){
+  modo = m;
+  document.getElementById('tab-kg').classList.toggle('active', m==='kg');
+  document.getElementById('tab-m3').classList.toggle('active', m==='m3');
+  document.getElementById('grupo-kg').style.display = m==='kg' ? 'block' : 'none';
+  document.getElementById('grupo-m3').style.display = m==='m3' ? 'block' : 'none';
+  calcular();
+}
+
+function ajustarValor(delta){
+  const inp = modo==='kg' ? document.getElementById('inp-kg') : document.getElementById('inp-m3');
+  const step = modo==='kg' ? 1 : 0.1;
+  let v = parseFloat(inp.value) || 0;
+  v = Math.max(modo==='kg'?1:0.1, v + delta*step*(modo==='kg'?1:1));
+  inp.value = modo==='kg' ? Math.round(v) : v.toFixed(1);
+  calcular();
+}
+
+function calcularPrecioBase(peso, esM3){
+  if(esM3) return { base: BASE_M3 * peso, extra: 0, extraLabel:'' };
+  if(peso <= 20) return { base: BASE_KG, extra: 0, extraLabel:'' };
+  const kgExtra = peso - 20;
+  const precioPorKg = BASE_KG/20;
+  const extra = kgExtra * precioPorKg;
+  return { base: BASE_KG, extra: extra, extraLabel: kgExtra+' kg adicionales' };
+}
+
+function calcular(){
+  const idx = parseInt(document.getElementById('sel-ciudad').value);
+  const ciudad = CIUDADES[idx];
+  const recargoPct = (ciudad.km/100) * RECARGO_PCT_POR_100KM;
+
+  let peso, esM3;
+  if(modo==='kg'){
+    peso = parseFloat(document.getElementById('inp-kg').value) || 20;
+    esM3 = false;
+  } else {
+    peso = parseFloat(document.getElementById('inp-m3').value) || 1;
+    esM3 = true;
+  }
+
+  const { base, extra, extraLabel } = calcularPrecioBase(peso, esM3);
+  const subtotal = base + extra;
+  const recargoMonto = subtotal * (recargoPct/100);
+  const total = subtotal + recargoMonto;
+
+  document.getElementById('result-dest').textContent = 'Santiago → ' + ciudad.nombre;
+  document.getElementById('result-num').textContent = fmt(total);
+  document.getElementById('bd-base').textContent = '$'+fmt(base);
+
+  if(extra > 0){
+    document.getElementById('bd-extra-row').style.display = 'flex';
+    document.getElementById('bd-extra-lbl').textContent = extraLabel;
+    document.getElementById('bd-extra').textContent = '$'+fmt(extra);
+  } else {
+    document.getElementById('bd-extra-row').style.display = 'none';
+  }
+
+  document.getElementById('bd-recargo-pct').textContent = recargoPct.toFixed(1)+'%';
+  document.getElementById('bd-recargo').textContent = '+$'+fmt(recargoMonto);
+  document.getElementById('bd-total').textContent = '$'+fmt(total);
+
+  document.getElementById('hint-km').textContent = '📍 '+ciudad.km+' km desde Santiago · recargo '+recargoPct.toFixed(1)+'%';
+
+  const pctBarra = (ciudad.km/KM_MAX_REF)*100;
+  document.getElementById('dist-fill').style.width = pctBarra+'%';
+  document.getElementById('dist-km-label').textContent = ciudad.km+' km';
+
+  renderTabla(idx, peso, esM3);
+}
+
+function renderTabla(idxActivo, peso, esM3){
+  const tbody = document.getElementById('tabla-comparativa');
+  tbody.innerHTML = CIUDADES.map((c, i)=>{
+    const recargoPct = (c.km/100) * RECARGO_PCT_POR_100KM;
+    const { base, extra } = calcularPrecioBase(peso, esM3);
+    const subtotal = base + extra;
+    const total = subtotal * (1 + recargoPct/100);
+    return `<tr class="${i===idxActivo?'active-row':''}">
+      <td class="city-name">${c.nombre}</td>
+      <td class="km-val">${c.km} km</td>
+      <td class="recargo-val">+${recargoPct.toFixed(1)}%</td>
+      <td class="price-val">$${fmt(total)}</td>
+    </tr>`;
+  }).join('');
+}
+
+calcular();
+</script>
+</body>
+</html>
