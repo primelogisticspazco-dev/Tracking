@@ -219,7 +219,7 @@ tr.active-row td:first-child{border-left:2px solid var(--accent);padding-left:10
   </div>
 
   <div class="footnote">
-    <b>Cómo se calcula:</b> tarifa base de $18.523 (0–20 kg) o $42.153 por m³, más un recargo de <b>2% cada 100 km</b> de distancia real por carretera desde Santiago (bodega Pudahuel) hasta el destino. Para cargas sobre 20 kg, el excedente se cobra proporcional a la tarifa base ($926/kg adicional aprox.). Al activar <b>peso volumétrico</b>, se cobra el mayor valor entre el peso real y el volumétrico (Largo×Ancho×Alto en cm ÷ 4.000) — estándar de la industria que protege ante envíos voluminosos pero livianos. Valores netos, referenciales — sujetos a confirmación según condiciones de despacho.
+    <b>Cómo se calcula:</b> tarifa base de $12.500 (0–20 kg) o $28.400 por m³, más un recargo de <b>2% cada 100 km</b> de distancia real por carretera desde Santiago (bodega Pudahuel) hasta el destino. Para cargas sobre 20 kg, el excedente se cobra proporcional a la tarifa base ($625/kg adicional aprox.). Al activar <b>peso volumétrico</b>, se cobra el mayor valor entre el peso real y el volumétrico (Largo×Ancho×Alto en cm ÷ 4.000) — estándar de la industria que protege ante envíos voluminosos pero livianos. Valores netos, referenciales — sujetos a confirmación según condiciones de despacho.
   </div>
 
 </div>
@@ -235,8 +235,8 @@ const CIUDADES = [
   {nombre:'Puerto Varas', km:995},
   {nombre:'Puerto Montt', km:1020},
 ];
-const BASE_KG = 18523;
-const BASE_M3 = 42153;
+const BASE_KG = 12500;
+const BASE_M3 = 28400;
 const RECARGO_PCT_POR_100KM = 2; // 2% cada 100km
 const KM_MAX_REF = 1020; // Puerto Montt, para la barra visual
 
