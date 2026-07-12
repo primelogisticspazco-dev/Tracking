@@ -118,6 +118,30 @@ tr.active-row td:first-child{border-left:2px solid var(--accent);padding-left:10
           <button class="step-btn" onclick="ajustarValor(1)">+</button>
         </div>
         <div class="hint" id="hint-kg">Tarifa base cubre hasta 20 kg. Sobre ese peso se prorratea proporcionalmente.</div>
+
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--bdr)">
+          <label class="f-label" style="display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" id="chk-volumetrico" onchange="toggleVolumetrico()" style="width:14px;height:14px;cursor:pointer"/>
+            📐 Calcular peso volumétrico (opcional)
+          </label>
+          <div id="dims-wrap" style="display:none;margin-top:12px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+              <div>
+                <label class="f-label" style="font-size:9px">Largo (cm)</label>
+                <input class="f-inp" id="dim-largo" type="number" value="30" min="1" oninput="calcular()" style="text-align:center;padding:10px"/>
+              </div>
+              <div>
+                <label class="f-label" style="font-size:9px">Ancho (cm)</label>
+                <input class="f-inp" id="dim-ancho" type="number" value="30" min="1" oninput="calcular()" style="text-align:center;padding:10px"/>
+              </div>
+              <div>
+                <label class="f-label" style="font-size:9px">Alto (cm)</label>
+                <input class="f-inp" id="dim-alto" type="number" value="30" min="1" oninput="calcular()" style="text-align:center;padding:10px"/>
+              </div>
+            </div>
+            <div class="hint" id="hint-volumetrico" style="margin-top:8px"></div>
+          </div>
+        </div>
       </div>
 
       <div class="f-group" id="grupo-m3" style="display:none">
@@ -195,7 +219,7 @@ tr.active-row td:first-child{border-left:2px solid var(--accent);padding-left:10
   </div>
 
   <div class="footnote">
-    <b>Cómo se calcula:</b> tarifa base de $18.523 (0–20 kg) o $42.153 por m³, más un recargo de <b>2% cada 100 km</b> de distancia real por carretera desde Santiago (bodega Pudahuel) hasta el destino. Para cargas sobre 20 kg, el excedente se cobra proporcional a la tarifa base ($926/kg adicional aprox.). Valores netos, referenciales — sujetos a confirmación según condiciones de despacho.
+    <b>Cómo se calcula:</b> tarifa base de $18.523 (0–20 kg) o $42.153 por m³, más un recargo de <b>2% cada 100 km</b> de distancia real por carretera desde Santiago (bodega Pudahuel) hasta el destino. Para cargas sobre 20 kg, el excedente se cobra proporcional a la tarifa base ($926/kg adicional aprox.). Al activar <b>peso volumétrico</b>, se cobra el mayor valor entre el peso real y el volumétrico (Largo×Ancho×Alto en cm ÷ 4.000) — estándar de la industria que protege ante envíos voluminosos pero livianos. Valores netos, referenciales — sujetos a confirmación según condiciones de despacho.
   </div>
 
 </div>
@@ -220,6 +244,21 @@ let modo = 'kg';
 
 function fmt(n){
   return Math.round(n).toLocaleString('es-CL');
+}
+
+const FACTOR_VOLUMETRICO = 4000; // estándar de la industria: L×A×H(cm) / 4000
+
+function toggleVolumetrico(){
+  const activo = document.getElementById('chk-volumetrico').checked;
+  document.getElementById('dims-wrap').style.display = activo ? 'block' : 'none';
+  calcular();
+}
+
+function calcularPesoVolumetrico(){
+  const l = parseFloat(document.getElementById('dim-largo').value) || 0;
+  const a = parseFloat(document.getElementById('dim-ancho').value) || 0;
+  const h = parseFloat(document.getElementById('dim-alto').value) || 0;
+  return (l*a*h)/FACTOR_VOLUMETRICO;
 }
 
 function cambiarModo(m){
@@ -254,10 +293,24 @@ function calcular(){
   const ciudad = CIUDADES[idx];
   const recargoPct = (ciudad.km/100) * RECARGO_PCT_POR_100KM;
 
-  let peso, esM3;
+  let peso, esM3, pesoVolumetrico=null, pesoUsado=null;
   if(modo==='kg'){
     peso = parseFloat(document.getElementById('inp-kg').value) || 20;
     esM3 = false;
+    const usaVolumetrico = document.getElementById('chk-volumetrico').checked;
+    if(usaVolumetrico){
+      pesoVolumetrico = calcularPesoVolumetrico();
+      pesoUsado = Math.max(peso, pesoVolumetrico);
+      const hintVol = document.getElementById('hint-volumetrico');
+      if(pesoVolumetrico > peso){
+        hintVol.innerHTML = '⚠️ Peso volumétrico ('+pesoVolumetrico.toFixed(1)+' kg) supera al real ('+peso+' kg) — se cobra el mayor.';
+        hintVol.style.color = 'var(--warn)';
+      } else {
+        hintVol.innerHTML = '✅ Peso real ('+peso+' kg) supera al volumétrico ('+pesoVolumetrico.toFixed(1)+' kg) — se cobra el real.';
+        hintVol.style.color = 'var(--muted)';
+      }
+      peso = pesoUsado;
+    }
   } else {
     peso = parseFloat(document.getElementById('inp-m3').value) || 1;
     esM3 = true;
